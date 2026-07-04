@@ -8,12 +8,14 @@ import {
   Patch,
   Post,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TemplatesService } from './templates.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { UpdateTemplateDto } from './dto/update-template.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2MB — plenty for a logo, keeps documents from bloating
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
@@ -39,6 +41,9 @@ export class TemplatesController {
     return { dataUri };
   }
 
+  // Browsing, previewing, and generating PDFs are public — only persisting a template
+  // (create/update) requires being logged in.
+  @UseGuards(JwtAuthGuard)
   @Post()
   create(@Body() dto: CreateTemplateDto) {
     return this.templatesService.create(dto);
@@ -54,6 +59,7 @@ export class TemplatesController {
     return this.templatesService.findOne(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateTemplateDto) {
     return this.templatesService.update(id, dto);
