@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import * as mongoose from 'mongoose';
 import { Document, Types } from 'mongoose';
 
 export type TemplateDocument = Template & Document;
@@ -88,7 +89,7 @@ export class Template {
   @Prop({ required: true })
   compiledTemplate: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true })
   createdBy: Types.ObjectId;
 }
 
