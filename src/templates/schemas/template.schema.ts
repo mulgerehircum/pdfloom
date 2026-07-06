@@ -13,6 +13,29 @@ export class TableColumn {
 
   @Prop({ required: true })
   fieldPath: string;
+
+  // When true, fieldPath is treated as a boolean and rendered as a colored pill (the
+  // true/false label + color pairs below) instead of the raw true/false text.
+  @Prop()
+  badge?: boolean;
+
+  @Prop()
+  badgeTrueLabel?: string;
+
+  @Prop()
+  badgeTrueBg?: string;
+
+  @Prop()
+  badgeTrueColor?: string;
+
+  @Prop()
+  badgeFalseLabel?: string;
+
+  @Prop()
+  badgeFalseBg?: string;
+
+  @Prop()
+  badgeFalseColor?: string;
 }
 export const TableColumnSchema = SchemaFactory.createForClass(TableColumn);
 
@@ -42,6 +65,19 @@ export class TemplateElement {
 
   @Prop({ default: 12 })
   fontSize: number;
+
+  // CSS color (e.g. "#ffffff" or "rgba(...)") for 'text'/'field' content. Optional — falls
+  // back to the browser default (black) when unset, same as every element before this.
+  @Prop()
+  color?: string;
+
+  // CSS background-color for the element's box — lets a plain 'text' element (even with
+  // empty content) double as a colored panel/rect behind other elements placed on top of it.
+  @Prop()
+  backgroundColor?: string;
+
+  @Prop()
+  borderRadius?: number;
 
   // 'text' elements: literal content rendered as-is.
   @Prop()

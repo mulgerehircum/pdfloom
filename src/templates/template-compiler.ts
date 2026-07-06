@@ -1,4 +1,4 @@
-import { TemplateElement } from './schemas/template.schema';
+import { TableColumn, TemplateElement } from './schemas/template.schema';
 
 // Field/table paths come from a fixed dropdown on the frontend, but sanitize anyway
 // so a hand-crafted API request can't break out of the intended {{ }} expression.
@@ -12,6 +12,15 @@ function escapeHtml(value: string): string {
 
 const DATA_URI_PATTERN = /^data:image\/(png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/=]+$/;
 
+// Field/table colors come from a fixed color picker on the frontend, but sanitize anyway
+// so a hand-crafted API request can't break out of the style attribute. Accepts hex,
+// rgb()/rgba(), and bare CSS color keywords (e.g. "white").
+const COLOR_PATTERN = /^(#[0-9a-fA-F]{3,8}|rgba?\([0-9.,%\s]+\)|[a-zA-Z]+)$/;
+
+function sanitizeColor(value?: string): string {
+  return value && COLOR_PATTERN.test(value) ? value : '';
+}
+
 // imageData comes from an authenticated upload endpoint, but validate the shape anyway
 // before splicing it into an HTML attribute — base64 can't contain quotes/angle-brackets,
 // so this is defense in depth against a hand-crafted API request, not the normal path.
@@ -19,8 +28,30 @@ function sanitizeImageData(imageData?: string): string {
   return imageData && DATA_URI_PATTERN.test(imageData) ? imageData : '';
 }
 
+function compileTableCell(c: TableColumn): string {
+  const path = sanitizeFieldPath(c.fieldPath);
+  if (!c.badge) {
+    return `<td>{{ this.${path} }}</td>`;
+  }
+
+  const trueLabel = escapeHtml(c.badgeTrueLabel ?? 'True');
+  const falseLabel = escapeHtml(c.badgeFalseLabel ?? 'False');
+  const trueStyle = `background:${sanitizeColor(c.badgeTrueBg) || '#eee'};color:${sanitizeColor(c.badgeTrueColor) || '#333'}`;
+  const falseStyle = `background:${sanitizeColor(c.badgeFalseBg) || '#eee'};color:${sanitizeColor(c.badgeFalseColor) || '#333'}`;
+  return (
+    `<td>{{#if this.${path}}}<span class="badge" style="${trueStyle}">${trueLabel}</span>` +
+    `{{else}}<span class="badge" style="${falseStyle}">${falseLabel}</span>{{/if}}</td>`
+  );
+}
+
 function compileElement(el: TemplateElement): string {
-  const style = `left:${el.x}px; top:${el.y}px; width:${el.width}px; height:${el.height}px; font-size:${el.fontSize ?? 12}px;`;
+  const color = sanitizeColor(el.color);
+  const backgroundColor = sanitizeColor(el.backgroundColor);
+  const style =
+    `left:${el.x}px; top:${el.y}px; width:${el.width}px; height:${el.height}px; font-size:${el.fontSize ?? 12}px;` +
+    (color ? ` color:${color};` : '') +
+    (backgroundColor ? ` background-color:${backgroundColor};` : '') +
+    (typeof el.borderRadius === 'number' ? ` border-radius:${el.borderRadius}px;` : '');
 
   switch (el.type) {
     case 'text':
@@ -35,7 +66,7 @@ function compileElement(el: TemplateElement): string {
       const itemsPath = sanitizeFieldPath(el.itemsPath ?? '');
       const columns = el.columns ?? [];
       const headerCells = columns.map((c) => `<th>${escapeHtml(c.label)}</th>`).join('');
-      const bodyCells = columns.map((c) => `<td>{{ this.${sanitizeFieldPath(c.fieldPath)} }}</td>`).join('');
+      const bodyCells = columns.map(compileTableCell).join('');
       return `<div class="el" style="${style}"><table><thead><tr>${headerCells}</tr></thead><tbody>{{#each ${itemsPath}}}<tr>${bodyCells}</tr>{{/each}}</tbody></table></div>`;
     }
 
@@ -86,6 +117,7 @@ export function compileTemplateToHtml(template: {
   .el.image-el img { display: block; width: 100%; height: 100%; object-fit: contain; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1px solid #ccc; padding: 4px 6px; font-size: inherit; text-align: left; }
+  .badge { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-weight: 700; }
 </style>
 </head>
 <body>

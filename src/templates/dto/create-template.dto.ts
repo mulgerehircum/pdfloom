@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
+  IsBoolean,
   IsIn,
   IsNotEmpty,
   IsNumber,
@@ -19,6 +20,34 @@ export class TableColumnDto {
   @IsString()
   @IsNotEmpty()
   fieldPath: string;
+
+  @IsBoolean()
+  @IsOptional()
+  badge?: boolean;
+
+  @IsString()
+  @IsOptional()
+  badgeTrueLabel?: string;
+
+  @IsString()
+  @IsOptional()
+  badgeTrueBg?: string;
+
+  @IsString()
+  @IsOptional()
+  badgeTrueColor?: string;
+
+  @IsString()
+  @IsOptional()
+  badgeFalseLabel?: string;
+
+  @IsString()
+  @IsOptional()
+  badgeFalseBg?: string;
+
+  @IsString()
+  @IsOptional()
+  badgeFalseColor?: string;
 }
 
 export class TemplateElementDto {
@@ -51,6 +80,18 @@ export class TemplateElementDto {
   @IsNumber()
   @IsOptional()
   fontSize?: number;
+
+  @IsString()
+  @IsOptional()
+  color?: string;
+
+  @IsString()
+  @IsOptional()
+  backgroundColor?: string;
+
+  @IsNumber()
+  @IsOptional()
+  borderRadius?: number;
 
   @IsString()
   @IsOptional()
