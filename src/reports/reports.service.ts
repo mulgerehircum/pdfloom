@@ -10,6 +10,7 @@ import { PreviewTemplateDto } from '../templates/dto/preview-template.dto';
 
 const DEFAULT_PAGE_WIDTH = 794;
 const DEFAULT_PAGE_HEIGHT = 1123;
+const MIN_PREVIEW_WIDTH = 40; // guards against a degenerate/zero-size screenshot request
 
 export interface ReportContext {
   generatedAt: string;
@@ -76,6 +77,47 @@ export class ReportsService {
     }
   }
 
+  // Screenshots just the first .page box (clip, not the full scrollable document) — a
+  // template can have multiple pages, but a picker thumbnail only ever needs the first.
+  //
+  // targetWidth is optional — omitted, this renders at the page's true resolution; passed,
+  // it renders proportionally smaller (never larger — upscaling a screenshot request past
+  // the real page size would just waste bandwidth for no extra detail). The .page box is
+  // shrunk via a CSS transform (not a smaller viewport alone), the same technique the
+  // frontend's own thumbnail rail uses, so every absolutely-positioned element scales down
+  // together with it instead of overflowing/clipping against a viewport that no longer
+  // matches the coordinate system they were positioned in.
+  private async renderHtmlToImage(html: string, pageWidth: number, pageHeight: number, targetWidth?: number): Promise<Buffer> {
+    const clampedWidth = targetWidth ? Math.min(Math.max(targetWidth, MIN_PREVIEW_WIDTH), pageWidth) : pageWidth;
+    const scale = clampedWidth / pageWidth;
+    const clampedHeight = Math.round(pageHeight * scale);
+
+    const browser = await puppeteer.launch({
+      headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: clampedWidth, height: clampedHeight });
+      await page.setContent(html, { waitUntil: 'load' });
+      if (scale !== 1) {
+        await page.evaluate((s) => {
+          const pageEl = document.querySelector<HTMLElement>('.page');
+          if (pageEl) {
+            pageEl.style.transform = `scale(${s})`;
+            pageEl.style.transformOrigin = 'top left';
+          }
+        }, scale);
+      }
+      const screenshot = await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: clampedWidth, height: clampedHeight } });
+      return Buffer.from(screenshot);
+    } finally {
+      await browser.close();
+    }
+  }
+
   async renderStockReportHtml(): Promise<string> {
     const context = await this.buildReportContext();
     const templateSource = await readFile(join(__dirname, 'templates', 'stock-report.hbs'), 'utf-8');
@@ -99,12 +141,24 @@ export class ReportsService {
     return this.renderHtmlToPdf(await this.renderCustomTemplateHtml(templateId), { top: '0px', bottom: '0px' });
   }
 
+  // Renders a saved template's first page as a PNG thumbnail, for a not-yet-built template
+  // picker UI. Unlike renderCustomTemplateHtml/Pdf (public, ownership-agnostic — those exist
+  // so a shared "download PDF" link works for anyone), this checks ownership: a picker
+  // showing thumbnails of "my templates" shouldn't render someone else's template on request.
+  async renderTemplatePreviewImage(templateId: string, ownerId: string, width?: number): Promise<Buffer> {
+    const template = await this.templatesService.findOwned(templateId, ownerId);
+    const context = await this.buildReportContext();
+    const html = handlebars.compile(template.compiledTemplate)(context);
+    return this.renderHtmlToImage(html, template.pageWidth, template.pageHeight, width);
+  }
+
   // Compiles + renders an in-progress (unsaved) template layout directly, so the editor
   // can show a live preview without writing every keystroke to the database.
   async renderPreviewPdf(dto: PreviewTemplateDto): Promise<Buffer> {
     const compiled = compileTemplateToHtml({
       pageWidth: dto.pageWidth ?? DEFAULT_PAGE_WIDTH,
       pageHeight: dto.pageHeight ?? DEFAULT_PAGE_HEIGHT,
+      pageCount: dto.pageCount ?? 1,
       elements: dto.elements as any,
     });
     const context = await this.buildReportContext();

@@ -1,7 +1,10 @@
-import { Body, Controller, Get, Header, Param, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Post, Query, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { PreviewTemplateDto } from '../templates/dto/preview-template.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/current-user.decorator';
 
 @Controller('reports')
 export class ReportsController {
@@ -33,6 +36,30 @@ export class ReportsController {
   @Header('Content-Type', 'text/html')
   getCustomReportHtml(@Param('templateId') templateId: string) {
     return this.reportsService.renderCustomTemplateHtml(templateId);
+  }
+
+  // Ownership-checked (see ReportsService.renderTemplatePreviewImage) — unlike the routes
+  // above, this is for a picker showing the caller's own templates, not a public share link.
+  //
+  // Full manual @Res() (no passthrough) — combining a guard with @Res({ passthrough: true })
+  // + a manual res.send() here caused Nest to also try to write its own (empty) reply on top
+  // of the already-sent buffer, throwing ERR_HTTP_HEADERS_SENT. None of this app's other
+  // binary-response routes pair a guard with passthrough, so this combination hadn't been
+  // exercised before. Passthrough works fine without a guard (see getPreviewPdf below).
+  @UseGuards(JwtAuthGuard)
+  @Get('custom/:templateId/preview-image')
+  async getTemplatePreviewImage(
+    @Param('templateId') templateId: string,
+    @Query('width') width: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res() res: Response
+  ) {
+    // Absent/malformed/zero all fall back to full page resolution — Number(undefined) and
+    // Number('garbage') are both NaN, and NaN (like 0) is falsy, so `|| undefined` catches all three.
+    const requestedWidth = Number(width) || undefined;
+    const image = await this.reportsService.renderTemplatePreviewImage(templateId, user.userId, requestedWidth);
+    res.set('Content-Type', 'image/png');
+    res.send(image);
   }
 
   @Post('preview-pdf')
