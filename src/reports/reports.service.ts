@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import * as handlebars from 'handlebars';
 import puppeteer from 'puppeteer';
 import { ProductsService } from '../products/products.service';
+import { Product } from '../products/schemas/product.schema';
 import { TemplatesService } from '../templates/templates.service';
 import { compileTemplateToHtml } from '../templates/template-compiler';
 import { PreviewTemplateDto } from '../templates/dto/preview-template.dto';
@@ -12,19 +13,37 @@ const DEFAULT_PAGE_WIDTH = 794;
 const DEFAULT_PAGE_HEIGHT = 1123;
 const MIN_PREVIEW_WIDTH = 40; // guards against a degenerate/zero-size screenshot request
 
+export interface ReportProductRow {
+  sku: string;
+  name: string;
+  category: string;
+  quantity: number;
+  unitPrice: string;
+  value: string;
+  isLowStock: boolean;
+}
+
 export interface ReportContext {
   generatedAt: string;
-  products: Array<{
-    sku: string;
-    name: string;
-    category: string;
-    quantity: number;
-    unitPrice: string;
-    value: string;
-    isLowStock: boolean;
-  }>;
+  products: ReportProductRow[];
   totalValue: string;
+  totalSkus: number;
+  unitsInStock: number;
+  needsRestocking: number;
 }
+
+// The template editor's field/column pickers read this instead of a hand-maintained list —
+// see ReportsService.getFieldSchema, which derives both arrays from the real context-building
+// code below rather than a parallel declaration that could silently drift out of sync (the
+// bug that motivated this in the first place).
+export interface ReportFieldSchema {
+  scalarFields: string[];
+  productFields: string[];
+}
+
+// Only used to materialize a ReportProductRow's keys when no real products exist yet (see
+// getFieldSchema) — values are never shown to a user, only the resulting object's keys matter.
+const EMPTY_PRODUCT_SOURCE = { sku: '', name: '', category: '', quantity: 0, unitPrice: 0, lowStockThreshold: 0 };
 
 @Injectable()
 export class ReportsService {
@@ -33,6 +52,19 @@ export class ReportsService {
     private readonly templatesService: TemplatesService
   ) {}
 
+  // Data-independent field/column list for the editor's pickers, derived from the actual
+  // context-building code rather than a hand-maintained mirror of it — adding a field to
+  // buildReportContext's return value or to mapProductToRow shows up here automatically,
+  // with no second place to remember to update.
+  async getFieldSchema(): Promise<ReportFieldSchema> {
+    const context = await this.buildReportContext();
+    const sampleRow = context.products[0] ?? this.mapProductToRow(EMPTY_PRODUCT_SOURCE);
+    return {
+      scalarFields: Object.keys(context).filter((key) => key !== 'products'),
+      productFields: Object.keys(sampleRow),
+    };
+  }
+
   // Exposed so the template editor can show/measure real field values (e.g. "generatedAt")
   // instead of the raw {{ fieldPath }} placeholder, which is a different length and was
   // causing auto-fit boxes to clip the real value once rendered into the actual PDF.
@@ -40,10 +72,8 @@ export class ReportsService {
     return this.buildReportContext();
   }
 
-  private async buildReportContext(): Promise<ReportContext> {
-    const products = await this.productsService.findAll();
-
-    const rows = products.map((product) => ({
+  private mapProductToRow(product: Pick<Product, 'sku' | 'name' | 'category' | 'quantity' | 'unitPrice' | 'lowStockThreshold'>): ReportProductRow {
+    return {
       sku: product.sku,
       name: product.name,
       category: product.category ?? '-',
@@ -51,13 +81,21 @@ export class ReportsService {
       unitPrice: product.unitPrice.toFixed(2),
       value: (product.quantity * product.unitPrice).toFixed(2),
       isLowStock: product.quantity <= product.lowStockThreshold,
-    }));
+    };
+  }
+
+  private async buildReportContext(): Promise<ReportContext> {
+    const products = await this.productsService.findAll();
+    const rows = products.map((product) => this.mapProductToRow(product));
 
     const totalValue = rows.reduce((sum, row) => sum + Number(row.value), 0).toFixed(2);
+    const totalSkus = rows.length;
+    const unitsInStock = rows.reduce((sum, row) => sum + row.quantity, 0);
+    const needsRestocking = rows.filter((row) => row.isLowStock).length;
 
     const generatedAt = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
 
-    return { generatedAt, products: rows, totalValue };
+    return { generatedAt, products: rows, totalValue, totalSkus, unitsInStock, needsRestocking };
   }
 
   private async renderHtmlToPdf(html: string, margin = { top: '20px', bottom: '20px' }): Promise<Buffer> {

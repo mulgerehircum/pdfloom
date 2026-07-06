@@ -74,4 +74,11 @@ export class ReportsController {
   getContext() {
     return this.reportsService.getReportContext();
   }
+
+  // Data-independent list of field/column names the template editor can offer for 'field'
+  // elements and table columns — see ReportsService.getFieldSchema.
+  @Get('fields')
+  getFields() {
+    return this.reportsService.getFieldSchema();
+  }
 }
