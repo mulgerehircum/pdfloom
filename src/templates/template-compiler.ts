@@ -1,4 +1,5 @@
 import { TableColumn, TemplateElement } from './schemas/template.schema';
+import { findGoogleFont } from './google-fonts';
 
 // Field/table paths come from a fixed dropdown on the frontend, but sanitize anyway
 // so a hand-crafted API request can't break out of the intended {{ }} expression.
@@ -19,6 +20,13 @@ const COLOR_PATTERN = /^(#[0-9a-fA-F]{3,8}|rgba?\([0-9.,%\s]+\)|[a-zA-Z]+)$/;
 
 function sanitizeColor(value?: string): string {
   return value && COLOR_PATTERN.test(value) ? value : '';
+}
+
+// fontFamily comes from a fixed dropdown (see GOOGLE_FONTS) — validated here too, both as
+// defense in depth against a hand-crafted request and because this is also what decides
+// which Google Fonts stylesheet actually gets linked in the compiled page's <head>.
+function sanitizeFontFamily(value?: string): string {
+  return findGoogleFont(value)?.name ?? '';
 }
 
 // imageData comes from an authenticated upload endpoint, but validate the shape anyway
@@ -47,11 +55,15 @@ function compileTableCell(c: TableColumn): string {
 function compileElement(el: TemplateElement): string {
   const color = sanitizeColor(el.color);
   const backgroundColor = sanitizeColor(el.backgroundColor);
+  const fontFamily = sanitizeFontFamily(el.fontFamily);
   const style =
     `left:${el.x}px; top:${el.y}px; width:${el.width}px; height:${el.height}px; font-size:${el.fontSize ?? 12}px;` +
     (color ? ` color:${color};` : '') +
     (backgroundColor ? ` background-color:${backgroundColor};` : '') +
-    (typeof el.borderRadius === 'number' ? ` border-radius:${el.borderRadius}px;` : '');
+    (typeof el.borderRadius === 'number' ? ` border-radius:${el.borderRadius}px;` : '') +
+    // Quoted (Google Fonts names can contain spaces) with the page's default sans-serif as a
+    // fallback, same as an unset fontFamily already gets via the <body> rule.
+    (fontFamily ? ` font-family:'${fontFamily}', Helvetica, Arial, sans-serif;` : '');
 
   switch (el.type) {
     case 'text':
@@ -107,11 +119,21 @@ export function compileTemplateToHtml(template: {
     return `<div class="page">\n${elementsHtml}\n</div>`;
   }).join('\n');
 
+  // Only the fonts this template actually uses get linked — not the whole curated list —
+  // so a template that never picks a custom font makes no external request at all.
+  const usedGoogleFamilies = [
+    ...new Set(template.elements.map((el) => findGoogleFont(el.fontFamily)?.googleFamily).filter((f): f is string => !!f)),
+  ];
+  const googleFontsLink =
+    usedGoogleFamilies.length > 0
+      ? `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${usedGoogleFamilies.map((f) => `family=${f}`).join('&')}&display=swap" />\n`
+      : '';
+
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8" />
-<style>
+${googleFontsLink}<style>
   body { margin: 0; font-family: Helvetica, Arial, sans-serif; background: #fff; }
   /* Explicit white — without it, Puppeteer's screenshot() (preview-image) renders the
      unset background as black, unlike pdf() which happens to default to white paper. */

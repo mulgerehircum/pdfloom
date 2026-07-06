@@ -10,6 +10,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { GOOGLE_FONT_NAMES } from '../google-fonts';
 
 export class TableColumnDto {
   // Cosmetic display text only — empty is a valid value (e.g. mid-edit while retyping,
@@ -80,6 +81,10 @@ export class TemplateElementDto {
   @IsNumber()
   @IsOptional()
   fontSize?: number;
+
+  @IsIn(GOOGLE_FONT_NAMES)
+  @IsOptional()
+  fontFamily?: string;
 
   @IsString()
   @IsOptional()

@@ -18,6 +18,7 @@ import { UpdateTemplateDto } from './dto/update-template.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/current-user.decorator';
+import { GOOGLE_FONT_NAMES } from './google-fonts';
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2MB — plenty for a logo, keeps documents from bloating
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
@@ -57,6 +58,13 @@ export class TemplatesController {
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.templatesService.findAllByOwner(user.userId);
+  }
+
+  // Static route, not template data — must come before @Get(':id') below, or NestJS would
+  // match "/templates/fonts" into findOne() with id="fonts" instead.
+  @Get('fonts')
+  getFonts() {
+    return GOOGLE_FONT_NAMES;
   }
 
   @UseGuards(JwtAuthGuard)

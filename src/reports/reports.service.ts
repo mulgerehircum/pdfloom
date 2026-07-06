@@ -108,6 +108,11 @@ export class ReportsService {
     try {
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: 'load' });
+      // 'load' fires once the Google Fonts <link>'s CSS has arrived, but not once the actual
+      // font *files* it references have finished downloading — without this, a template using
+      // a custom font can silently render in the fallback font instead, since font loading is
+      // async and unrelated to the page's own load event.
+      await page.evaluateHandle('document.fonts.ready');
       const pdf = await page.pdf({ format: 'A4', printBackground: true, margin });
       return Buffer.from(pdf);
     } finally {
@@ -140,6 +145,7 @@ export class ReportsService {
       const page = await browser.newPage();
       await page.setViewport({ width: clampedWidth, height: clampedHeight });
       await page.setContent(html, { waitUntil: 'load' });
+      await page.evaluateHandle('document.fonts.ready');
       if (scale !== 1) {
         await page.evaluate((s) => {
           const pageEl = document.querySelector<HTMLElement>('.page');

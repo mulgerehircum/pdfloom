@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
 import { Document, Types } from 'mongoose';
+import { GOOGLE_FONT_NAMES } from '../google-fonts';
 
 export type TemplateDocument = Template & Document;
 
@@ -65,6 +66,9 @@ export class TemplateElement {
 
   @Prop({ default: 12 })
   fontSize: number;
+
+  @Prop({ enum: GOOGLE_FONT_NAMES })
+  fontFamily?: string;
 
   // CSS color (e.g. "#ffffff" or "rgba(...)") for 'text'/'field' content. Optional — falls
   // back to the browser default (black) when unset, same as every element before this.
