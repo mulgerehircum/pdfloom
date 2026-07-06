@@ -11,6 +11,10 @@ export class PreviewTemplateDto {
   @IsOptional()
   pageHeight?: number;
 
+  @IsNumber()
+  @IsOptional()
+  pageCount?: number;
+
   @ValidateNested({ each: true })
   @Type(() => TemplateElementDto)
   elements: TemplateElementDto[];

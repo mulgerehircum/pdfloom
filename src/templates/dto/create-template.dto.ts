@@ -45,6 +45,11 @@ export class TemplateElementDto {
 
   @IsNumber()
   @IsOptional()
+  @Min(0)
+  page?: number;
+
+  @IsNumber()
+  @IsOptional()
   fontSize?: number;
 
   @IsString()
@@ -81,6 +86,11 @@ export class CreateTemplateDto {
   @IsNumber()
   @IsOptional()
   pageHeight?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  pageCount?: number;
 
   @ValidateNested({ each: true })
   @Type(() => TemplateElementDto)

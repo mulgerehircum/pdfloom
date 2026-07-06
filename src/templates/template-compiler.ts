@@ -53,17 +53,33 @@ function compileElement(el: TemplateElement): string {
 export function compileTemplateToHtml(template: {
   pageWidth: number;
   pageHeight: number;
+  pageCount?: number;
   elements: TemplateElement[];
 }): string {
-  const elementsHtml = template.elements.map(compileElement).join('\n');
+  const pageCount = template.pageCount ?? 1;
+
+  // One .page div per page, each holding only the elements placed on it (element.page is
+  // 0-indexed). page-break-after forces Puppeteer's print-to-PDF to start a new PDF page at
+  // each boundary — :last-child skips the break after the final page so it doesn't leave a
+  // trailing blank page.
+  const pagesHtml = Array.from({ length: pageCount }, (_, pageIndex) => {
+    const elementsHtml = template.elements
+      .filter((el) => (el.page ?? 0) === pageIndex)
+      .map(compileElement)
+      .join('\n');
+    return `<div class="page">\n${elementsHtml}\n</div>`;
+  }).join('\n');
 
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8" />
 <style>
-  body { margin: 0; font-family: Helvetica, Arial, sans-serif; }
-  .page { position: relative; width: ${template.pageWidth}px; height: ${template.pageHeight}px; }
+  body { margin: 0; font-family: Helvetica, Arial, sans-serif; background: #fff; }
+  /* Explicit white — without it, Puppeteer's screenshot() (preview-image) renders the
+     unset background as black, unlike pdf() which happens to default to white paper. */
+  .page { position: relative; width: ${template.pageWidth}px; height: ${template.pageHeight}px; overflow: hidden; page-break-after: always; background: #fff; }
+  .page:last-child { page-break-after: auto; }
   .el { position: absolute; box-sizing: border-box; overflow: hidden; padding: 2px 4px; white-space: nowrap; }
   .el table { white-space: normal; }
   .el.image-el { padding: 0; }
@@ -73,9 +89,7 @@ export function compileTemplateToHtml(template: {
 </style>
 </head>
 <body>
-  <div class="page">
-${elementsHtml}
-  </div>
+${pagesHtml}
 </body>
 </html>`;
 }
