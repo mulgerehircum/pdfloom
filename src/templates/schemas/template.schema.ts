@@ -4,7 +4,7 @@ import { Document, Types } from 'mongoose';
 
 export type TemplateDocument = Template & Document;
 
-export type ElementType = 'text' | 'field' | 'table' | 'image';
+export type ElementType = 'text' | 'field' | 'table' | 'image' | 'panel';
 
 @Schema({ _id: false })
 export class TableColumn {
@@ -44,7 +44,7 @@ export class TemplateElement {
   @Prop({ required: true })
   id: string;
 
-  @Prop({ required: true, enum: ['text', 'field', 'table', 'image'] })
+  @Prop({ required: true, enum: ['text', 'field', 'table', 'image', 'panel'] })
   type: ElementType;
 
   @Prop({ required: true })

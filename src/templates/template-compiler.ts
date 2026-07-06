@@ -72,9 +72,15 @@ function compileElement(el: TemplateElement): string {
 
     case 'image': {
       const src = sanitizeImageData(el.imageData);
-      if (!src) return `<div class="el" style="${style}"></div>`;
+      if (!src) return `<div class="el image-el" style="${style}"></div>`;
       return `<div class="el image-el" style="${style}"><img src="${src}" alt="" /></div>`;
     }
+
+    // A pure background/border rect — no content of its own, just the shared color/
+    // backgroundColor/borderRadius styling above (e.g. a sidebar panel behind other elements
+    // placed on top of it).
+    case 'panel':
+      return `<div class="el panel-el" style="${style}"></div>`;
 
     default:
       return '';
@@ -115,6 +121,10 @@ export function compileTemplateToHtml(template: {
   .el table { white-space: normal; }
   .el.image-el { padding: 0; }
   .el.image-el img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  /* No content of its own, so no padding either — with box-sizing: border-box, the shared
+     2px/4px .el padding can't shrink below its own size, which would silently floor a thin
+     (e.g. 1px) panel's rendered height/width regardless of what was actually set. */
+  .el.panel-el { padding: 0; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1px solid #ccc; padding: 4px 6px; font-size: inherit; text-align: left; }
   .badge { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-weight: 700; }

@@ -55,8 +55,8 @@ export class TemplateElementDto {
   @IsNotEmpty()
   id: string;
 
-  @IsIn(['text', 'field', 'table', 'image'])
-  type: 'text' | 'field' | 'table' | 'image';
+  @IsIn(['text', 'field', 'table', 'image', 'panel'])
+  type: 'text' | 'field' | 'table' | 'image' | 'panel';
 
   @IsNumber()
   x: number;
