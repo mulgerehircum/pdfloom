@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export type TemplateDocument = Template & Document;
 
@@ -34,6 +34,10 @@ export class TemplateElement {
 
   @Prop({ required: true })
   height: number;
+
+  // Which page (0-indexed) this element is placed on — see Template.pageCount.
+  @Prop({ default: 0 })
+  page: number;
 
   @Prop({ default: 12 })
   fontSize: number;
@@ -76,8 +80,16 @@ export class Template {
   @Prop({ type: [TemplateElementSchema], default: [] })
   elements: TemplateElement[];
 
+  // Total page count — kept independent of `elements` so a deliberately blank trailing
+  // page (added but not yet populated) still persists rather than disappearing.
+  @Prop({ required: true, default: 1 })
+  pageCount: number;
+
   @Prop({ required: true })
   compiledTemplate: string;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
+  createdBy: Types.ObjectId;
 }
 
 export const TemplateSchema = SchemaFactory.createForClass(Template);

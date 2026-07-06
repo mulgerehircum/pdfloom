@@ -9,6 +9,7 @@ describe('Inventory flow (e2e)', () => {
   let app: INestApplication<App>;
   let mongod: MongoMemoryServer;
   let authHeader: string;
+  let otherAuthHeader: string;
 
   beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
@@ -27,6 +28,13 @@ describe('Inventory flow (e2e)', () => {
       .send({ username: 'e2e-tester', password: 'password123' })
       .expect(201);
     authHeader = `Bearer ${registerRes.body.accessToken}`;
+
+    // A second account, used to prove templates are private to their owner.
+    const otherRegisterRes = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ username: 'e2e-tester-2', password: 'password123' })
+      .expect(201);
+    otherAuthHeader = `Bearer ${otherRegisterRes.body.accessToken}`;
   }, 60000);
 
   afterAll(async () => {
@@ -86,32 +94,53 @@ describe('Inventory flow (e2e)', () => {
     expect(Buffer.isBuffer(pdfRes.body) ? pdfRes.body.length : pdfRes.text.length).toBeGreaterThan(0);
   }, 30000);
 
-  it('lets anyone browse templates, but only a logged-in user can save one', async () => {
+  it('scopes templates to their creator: private to manage, but publicly renderable', async () => {
     const templatePayload = {
-      name: 'Anon test template',
+      name: 'Owned template',
       elements: [{ id: 'el1', type: 'text', x: 40, y: 40, width: 160, height: 24, fontSize: 12, content: 'Hi' }],
     };
 
-    // Anyone can list templates without a token.
-    await request(app.getHttpServer()).get('/templates').expect(200);
-
-    // Saving (creating) one without a token is rejected.
+    // Listing and saving both require a token.
+    await request(app.getHttpServer()).get('/templates').expect(401);
     await request(app.getHttpServer()).post('/templates').send(templatePayload).expect(401);
 
-    // With a token, it succeeds — and the saved template is still publicly readable/renderable.
     const createRes = await request(app.getHttpServer())
       .post('/templates')
       .set('Authorization', authHeader)
       .send(templatePayload)
       .expect(201);
+    const templateId = createRes.body._id;
 
-    await request(app.getHttpServer()).get(`/templates/${createRes.body._id}`).expect(200);
-    await request(app.getHttpServer()).get(`/reports/custom/${createRes.body._id}/pdf`).expect(200);
-
-    // Updating (also "saving") without a token is rejected too.
+    // The owner sees it in their list and can fetch/update/delete it.
+    const listRes = await request(app.getHttpServer()).get('/templates').set('Authorization', authHeader).expect(200);
+    expect(listRes.body.some((t: { _id: string }) => t._id === templateId)).toBe(true);
+    await request(app.getHttpServer()).get(`/templates/${templateId}`).set('Authorization', authHeader).expect(200);
     await request(app.getHttpServer())
-      .patch(`/templates/${createRes.body._id}`)
-      .send({ name: 'Renamed without auth' })
-      .expect(401);
+      .patch(`/templates/${templateId}`)
+      .set('Authorization', authHeader)
+      .send({ name: 'Renamed by owner' })
+      .expect(200);
+
+    // A different logged-in user can't see, fetch, update, or delete someone else's template.
+    const otherListRes = await request(app.getHttpServer())
+      .get('/templates')
+      .set('Authorization', otherAuthHeader)
+      .expect(200);
+    expect(otherListRes.body.some((t: { _id: string }) => t._id === templateId)).toBe(false);
+    await request(app.getHttpServer()).get(`/templates/${templateId}`).set('Authorization', otherAuthHeader).expect(403);
+    await request(app.getHttpServer())
+      .patch(`/templates/${templateId}`)
+      .set('Authorization', otherAuthHeader)
+      .send({ name: 'Hijacked' })
+      .expect(403);
+    await request(app.getHttpServer()).delete(`/templates/${templateId}`).set('Authorization', otherAuthHeader).expect(403);
+
+    // Rendering the template's output is still public regardless of ownership — that's a
+    // separate concern (sharing a report link) from managing the template itself.
+    await request(app.getHttpServer()).get(`/reports/custom/${templateId}/pdf`).expect(200);
+
+    // The owner can delete it.
+    await request(app.getHttpServer()).delete(`/templates/${templateId}`).set('Authorization', authHeader).expect(200);
+    await request(app.getHttpServer()).get(`/templates/${templateId}`).set('Authorization', authHeader).expect(404);
   }, 30000);
 });
