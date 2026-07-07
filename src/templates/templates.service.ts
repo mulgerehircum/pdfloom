@@ -27,7 +27,13 @@ export class TemplatesService {
     const pageWidth = dto.pageWidth ?? DEFAULT_PAGE_WIDTH;
     const pageHeight = dto.pageHeight ?? DEFAULT_PAGE_HEIGHT;
     const pageCount = dto.pageCount ?? 1;
-    const compiledTemplate = compileTemplateToHtml({ pageWidth, pageHeight, pageCount, elements: dto.elements as any });
+    const compiledTemplate = compileTemplateToHtml({
+      pageWidth,
+      pageHeight,
+      pageBackgroundColor: dto.pageBackgroundColor,
+      pageCount,
+      elements: dto.elements as any,
+    });
 
     try {
       return await this.templateModel.create({ ...dto, pageWidth, pageHeight, pageCount, compiledTemplate, createdBy: ownerId });
@@ -65,16 +71,21 @@ export class TemplatesService {
 
     const pageWidth = dto.pageWidth ?? existing.pageWidth;
     const pageHeight = dto.pageHeight ?? existing.pageHeight;
+    const pageBackgroundColor = dto.pageBackgroundColor ?? existing.pageBackgroundColor;
     const pageCount = dto.pageCount ?? existing.pageCount;
     const elements = (dto.elements as any) ?? existing.elements;
-    const compiledTemplate = compileTemplateToHtml({ pageWidth, pageHeight, pageCount, elements });
+    const compiledTemplate = compileTemplateToHtml({ pageWidth, pageHeight, pageBackgroundColor, pageCount, elements });
 
     let updated: TemplateDocument | null;
     try {
       // findByIdAndUpdate skips schema validation by default — runValidators makes this
       // consistent with create(), which validates via the normal .save() path.
       updated = await this.templateModel
-        .findByIdAndUpdate(id, { ...dto, pageWidth, pageHeight, pageCount, elements, compiledTemplate }, { new: true, runValidators: true })
+        .findByIdAndUpdate(
+          id,
+          { ...dto, pageWidth, pageHeight, pageBackgroundColor, pageCount, elements, compiledTemplate },
+          { new: true, runValidators: true }
+        )
         .exec();
     } catch (err) {
       toHttpError(err);

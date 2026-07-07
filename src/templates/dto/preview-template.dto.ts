@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, ValidateNested } from 'class-validator';
+import { IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { TemplateElementDto } from './create-template.dto';
 
 export class PreviewTemplateDto {
@@ -10,6 +10,10 @@ export class PreviewTemplateDto {
   @IsNumber()
   @IsOptional()
   pageHeight?: number;
+
+  @IsString()
+  @IsOptional()
+  pageBackgroundColor?: string;
 
   @IsNumber()
   @IsOptional()

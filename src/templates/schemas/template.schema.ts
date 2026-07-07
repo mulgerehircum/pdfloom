@@ -137,6 +137,12 @@ export class Template {
   @Prop({ required: true, default: 1123 })
   pageHeight: number;
 
+  // One background for every page in the template — same reasoning as pageWidth/pageHeight
+  // being template-wide rather than per-page. Falls back to white (see template-compiler.ts)
+  // when unset.
+  @Prop()
+  pageBackgroundColor?: string;
+
   @Prop({ type: [TemplateElementSchema], default: [] })
   elements: TemplateElement[];
 

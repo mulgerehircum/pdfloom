@@ -202,6 +202,7 @@ export class ReportsService {
     const compiled = compileTemplateToHtml({
       pageWidth: dto.pageWidth ?? DEFAULT_PAGE_WIDTH,
       pageHeight: dto.pageHeight ?? DEFAULT_PAGE_HEIGHT,
+      pageBackgroundColor: dto.pageBackgroundColor,
       pageCount: dto.pageCount ?? 1,
       elements: dto.elements as any,
     });

@@ -155,6 +155,10 @@ export class CreateTemplateDto {
   @IsOptional()
   pageHeight?: number;
 
+  @IsString()
+  @IsOptional()
+  pageBackgroundColor?: string;
+
   @IsNumber()
   @IsOptional()
   @Min(1)

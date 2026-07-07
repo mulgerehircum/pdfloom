@@ -125,10 +125,12 @@ function compileElement(el: TemplateElement): string {
 export function compileTemplateToHtml(template: {
   pageWidth: number;
   pageHeight: number;
+  pageBackgroundColor?: string;
   pageCount?: number;
   elements: TemplateElement[];
 }): string {
   const pageCount = template.pageCount ?? 1;
+  const pageBackgroundColor = sanitizeColor(template.pageBackgroundColor) || '#fff';
 
   // One .page div per page, each holding only the elements placed on it (element.page is
   // 0-indexed). page-break-after forces Puppeteer's print-to-PDF to start a new PDF page at
@@ -160,7 +162,7 @@ ${googleFontsLink}<style>
   body { margin: 0; font-family: Helvetica, Arial, sans-serif; background: #fff; }
   /* Explicit white — without it, Puppeteer's screenshot() (preview-image) renders the
      unset background as black, unlike pdf() which happens to default to white paper. */
-  .page { position: relative; width: ${template.pageWidth}px; height: ${template.pageHeight}px; overflow: hidden; page-break-after: always; background: #fff; }
+  .page { position: relative; width: ${template.pageWidth}px; height: ${template.pageHeight}px; overflow: hidden; page-break-after: always; background: ${pageBackgroundColor}; }
   .page:last-child { page-break-after: auto; }
   .el { position: absolute; box-sizing: border-box; overflow: hidden; padding: 2px 4px; white-space: nowrap; }
   .el table { white-space: normal; }
