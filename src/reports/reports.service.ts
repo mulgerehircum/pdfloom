@@ -196,6 +196,16 @@ export class ReportsService {
     return this.renderHtmlToImage(html, template.pageWidth, template.pageHeight, width);
   }
 
+  // Same rendering as above but for the public gallery — shared-gated instead of
+  // ownership-gated (see TemplatesService.findShared), so an anonymous gallery visitor can
+  // see a thumbnail of a template they don't own and never logged in for.
+  async renderSharedTemplatePreviewImage(templateId: string, width?: number): Promise<Buffer> {
+    const template = await this.templatesService.findShared(templateId);
+    const context = await this.buildReportContext();
+    const html = handlebars.compile(template.compiledTemplate)(context);
+    return this.renderHtmlToImage(html, template.pageWidth, template.pageHeight, width);
+  }
+
   // Compiles + renders an in-progress (unsaved) template layout directly, so the editor
   // can show a live preview without writing every keystroke to the database.
   async renderPreviewPdf(dto: PreviewTemplateDto): Promise<Buffer> {

@@ -62,6 +62,23 @@ export class ReportsController {
     res.send(image);
   }
 
+  // Public gallery counterpart to getTemplatePreviewImage above — shared-gated instead of
+  // ownership-gated, so a gallery card can show a thumbnail without the visitor owning (or
+  // being logged into) the template. No guard needed, so passthrough + res.send works fine
+  // here (see the comment on getTemplatePreviewImage for why that combination breaks with a
+  // guard in front of it).
+  @Get('public/:templateId/preview-image')
+  @Header('Content-Type', 'image/png')
+  async getPublicTemplatePreviewImage(
+    @Param('templateId') templateId: string,
+    @Query('width') width: string | undefined,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const requestedWidth = Number(width) || undefined;
+    const image = await this.reportsService.renderSharedTemplatePreviewImage(templateId, requestedWidth);
+    res.send(image);
+  }
+
   @Post('preview-pdf')
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'inline; filename="preview.pdf"')
