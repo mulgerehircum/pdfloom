@@ -27,7 +27,7 @@ npm install
 npm run start:dev
 ```
 
-Requires a MongoDB instance reachable at `MONGODB_URI` (defaults to `mongodb://localhost:27017/pdflloom`). Set `JWT_SECRET` in `.env` to something real outside of local dev.
+Requires a MongoDB instance reachable at `MONGODB_URI` (defaults to `mongodb://localhost:27017/pdfloom`). Set `JWT_SECRET` in `.env` to something real outside of local dev.
 
 ## Running with Docker Compose
 
