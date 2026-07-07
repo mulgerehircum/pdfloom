@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Error as MongooseError, Model } from 'mongoose';
-import { Template, TemplateDocument } from './schemas/template.schema';
+import { BackgroundFill, GradientStop, Template, TemplateDocument, TemplateElement } from './schemas/template.schema';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { UpdateTemplateDto } from './dto/update-template.dto';
 import { compileTemplateToHtml } from './template-compiler';
@@ -18,6 +18,20 @@ export interface PublicTemplateSummary {
   pageWidth: number;
   pageHeight: number;
   elementCount: number;
+}
+
+// What pre-filling a new, unsaved editor session from a shared template needs — the actual
+// editable layout, but still not compiledTemplate/createdBy (see findSharedContent below).
+export interface SharedTemplateContent {
+  name: string;
+  pageWidth: number;
+  pageHeight: number;
+  pageBackgroundColor?: string;
+  pageBackgroundFill?: BackgroundFill;
+  pageGradientStops?: GradientStop[];
+  pageGradientAngle?: number;
+  pageCount: number;
+  elements: TemplateElement[];
 }
 
 // Mongoose's own ValidationError (e.g. a table column saved with an empty label — `required`
@@ -88,6 +102,26 @@ export class TemplatesService {
       throw new NotFoundException(`Shared template ${id} not found`);
     }
     return template;
+  }
+
+  // Lets an anonymous or non-owner visitor pre-fill a new (unsaved) editor session from a
+  // shared template — deliberately excludes compiledTemplate/createdBy, same reasoning as
+  // findPublic's gallery summary. This is what backs the gallery's "Use this template" for a
+  // free template without requiring login; saving still goes through the normal, auth-gated
+  // create() once they're ready.
+  async findSharedContent(id: string): Promise<SharedTemplateContent> {
+    const template = await this.findShared(id);
+    return {
+      name: template.name,
+      pageWidth: template.pageWidth,
+      pageHeight: template.pageHeight,
+      pageBackgroundColor: template.pageBackgroundColor,
+      pageBackgroundFill: template.pageBackgroundFill,
+      pageGradientStops: template.pageGradientStops,
+      pageGradientAngle: template.pageGradientAngle,
+      pageCount: template.pageCount,
+      elements: template.elements,
+    };
   }
 
   // Copies a shared gallery template's layout into a new template owned by the requesting
