@@ -1,6 +1,6 @@
 # PDFloom
 
-A PDF template designer and report-generation API built on NestJS + MongoDB + Handlebars-to-PDF, with inventory/stock-tracking as the demo domain.
+A drag-and-drop PDF template designer with live preview and data binding, built on NestJS + MongoDB + Handlebars-to-PDF — bundled here with a real inventory/stock-tracking API as its first live data source.
 
 ## Stack
 
