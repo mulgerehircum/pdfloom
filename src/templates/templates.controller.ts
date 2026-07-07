@@ -74,6 +74,16 @@ export class TemplatesController {
     return this.templatesService.findPublic();
   }
 
+  // Lets an anonymous (or just non-owner) visitor start a new, unsaved template pre-filled
+  // with a shared gallery template's layout — no login needed to *start* editing, same as
+  // any other new template; login is only required once they actually hit Save. Two path
+  // segments, so this can never collide with @Get(':id') below regardless of declaration
+  // order, but kept next to the other 'public' routes for readability.
+  @Get('public/:id')
+  findSharedContent(@Param('id') id: string) {
+    return this.templatesService.findSharedContent(id);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
