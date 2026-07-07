@@ -11,6 +11,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { GOOGLE_FONT_NAMES } from '../google-fonts';
+import { TEXT_ALIGN_VALUES } from '../schemas/template.schema';
+import type { TextAlign } from '../schemas/template.schema';
 
 export class TableColumnDto {
   // Cosmetic display text only — empty is a valid value (e.g. mid-edit while retyping,
@@ -49,6 +51,14 @@ export class TableColumnDto {
   @IsString()
   @IsOptional()
   badgeFalseColor?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  bold?: boolean;
+
+  @IsIn(TEXT_ALIGN_VALUES)
+  @IsOptional()
+  align?: TextAlign;
 }
 
 export class TemplateElementDto {
@@ -85,6 +95,18 @@ export class TemplateElementDto {
   @IsIn(GOOGLE_FONT_NAMES)
   @IsOptional()
   fontFamily?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  bold?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  italic?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  underline?: boolean;
 
   @IsString()
   @IsOptional()

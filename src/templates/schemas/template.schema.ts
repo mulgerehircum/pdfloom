@@ -6,6 +6,8 @@ import { GOOGLE_FONT_NAMES } from '../google-fonts';
 export type TemplateDocument = Template & Document;
 
 export type ElementType = 'text' | 'field' | 'table' | 'image' | 'panel';
+export type TextAlign = 'left' | 'center' | 'right';
+export const TEXT_ALIGN_VALUES: TextAlign[] = ['left', 'center', 'right'];
 
 @Schema({ _id: false })
 export class TableColumn {
@@ -37,6 +39,14 @@ export class TableColumn {
 
   @Prop()
   badgeFalseColor?: string;
+
+  // Per-column formatting — independent of the table element's own bold/textAlign, so e.g.
+  // a numeric column can be right-aligned while a name column stays left-aligned.
+  @Prop()
+  bold?: boolean;
+
+  @Prop({ enum: TEXT_ALIGN_VALUES })
+  align?: TextAlign;
 }
 export const TableColumnSchema = SchemaFactory.createForClass(TableColumn);
 
@@ -69,6 +79,15 @@ export class TemplateElement {
 
   @Prop({ enum: GOOGLE_FONT_NAMES })
   fontFamily?: string;
+
+  @Prop()
+  bold?: boolean;
+
+  @Prop()
+  italic?: boolean;
+
+  @Prop()
+  underline?: boolean;
 
   // CSS color (e.g. "#ffffff" or "rgba(...)") for 'text'/'field' content. Optional — falls
   // back to the browser default (black) when unset, same as every element before this.

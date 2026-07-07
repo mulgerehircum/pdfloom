@@ -1,4 +1,4 @@
-import { TableColumn, TemplateElement } from './schemas/template.schema';
+import { TableColumn, TemplateElement, TextAlign, TEXT_ALIGN_VALUES } from './schemas/template.schema';
 import { findGoogleFont } from './google-fonts';
 
 // Field/table paths come from a fixed dropdown on the frontend, but sanitize anyway
@@ -29,6 +29,10 @@ function sanitizeFontFamily(value?: string): string {
   return findGoogleFont(value)?.name ?? '';
 }
 
+function sanitizeTextAlign(value?: TextAlign): TextAlign | '' {
+  return value && TEXT_ALIGN_VALUES.includes(value) ? value : '';
+}
+
 // imageData comes from an authenticated upload endpoint, but validate the shape anyway
 // before splicing it into an HTML attribute — base64 can't contain quotes/angle-brackets,
 // so this is defense in depth against a hand-crafted API request, not the normal path.
@@ -36,10 +40,19 @@ function sanitizeImageData(imageData?: string): string {
   return imageData && DATA_URI_PATTERN.test(imageData) ? imageData : '';
 }
 
+// Per-column formatting — independent of whatever bold/textAlign the table *element* itself
+// has, so e.g. a Qty column can be right-aligned while a Name column stays left-aligned.
+function compileCellStyleAttr(c: TableColumn): string {
+  const align = sanitizeTextAlign(c.align);
+  const style = (align ? `text-align:${align};` : '') + (c.bold ? 'font-weight:700;' : '');
+  return style ? ` style="${style}"` : '';
+}
+
 function compileTableCell(c: TableColumn): string {
   const path = sanitizeFieldPath(c.fieldPath);
+  const styleAttr = compileCellStyleAttr(c);
   if (!c.badge) {
-    return `<td>{{ this.${path} }}</td>`;
+    return `<td${styleAttr}>{{ this.${path} }}</td>`;
   }
 
   const trueLabel = escapeHtml(c.badgeTrueLabel ?? 'True');
@@ -47,7 +60,7 @@ function compileTableCell(c: TableColumn): string {
   const trueStyle = `background:${sanitizeColor(c.badgeTrueBg) || '#eee'};color:${sanitizeColor(c.badgeTrueColor) || '#333'}`;
   const falseStyle = `background:${sanitizeColor(c.badgeFalseBg) || '#eee'};color:${sanitizeColor(c.badgeFalseColor) || '#333'}`;
   return (
-    `<td>{{#if this.${path}}}<span class="badge" style="${trueStyle}">${trueLabel}</span>` +
+    `<td${styleAttr}>{{#if this.${path}}}<span class="badge" style="${trueStyle}">${trueLabel}</span>` +
     `{{else}}<span class="badge" style="${falseStyle}">${falseLabel}</span>{{/if}}</td>`
   );
 }
@@ -63,7 +76,10 @@ function compileElement(el: TemplateElement): string {
     (typeof el.borderRadius === 'number' ? ` border-radius:${el.borderRadius}px;` : '') +
     // Quoted (Google Fonts names can contain spaces) with the page's default sans-serif as a
     // fallback, same as an unset fontFamily already gets via the <body> rule.
-    (fontFamily ? ` font-family:'${fontFamily}', Helvetica, Arial, sans-serif;` : '');
+    (fontFamily ? ` font-family:'${fontFamily}', Helvetica, Arial, sans-serif;` : '') +
+    (el.bold ? ' font-weight:700;' : '') +
+    (el.italic ? ' font-style:italic;' : '') +
+    (el.underline ? ' text-decoration:underline;' : '');
 
   switch (el.type) {
     case 'text':
@@ -77,7 +93,14 @@ function compileElement(el: TemplateElement): string {
     case 'table': {
       const itemsPath = sanitizeFieldPath(el.itemsPath ?? '');
       const columns = el.columns ?? [];
-      const headerCells = columns.map((c) => `<th>${escapeHtml(c.label)}</th>`).join('');
+      // Header alignment mirrors the column's own align (so a right-aligned Qty column has a
+      // right-aligned header too) — bold is left alone since <th> is already bold by default.
+      const headerCells = columns
+        .map((c) => {
+          const align = sanitizeTextAlign(c.align);
+          return `<th${align ? ` style="text-align:${align};"` : ''}>${escapeHtml(c.label)}</th>`;
+        })
+        .join('');
       const bodyCells = columns.map(compileTableCell).join('');
       return `<div class="el" style="${style}"><table><thead><tr>${headerCells}</tr></thead><tbody>{{#each ${itemsPath}}}<tr>${bodyCells}</tr>{{/each}}</tbody></table></div>`;
     }
