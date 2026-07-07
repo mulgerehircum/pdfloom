@@ -17,7 +17,7 @@ import { AuthModule } from './auth/auth.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        uri: config.get<string>('MONGODB_URI', 'mongodb://localhost:27017/pdffloom'),
+        uri: config.get<string>('MONGODB_URI', 'mongodb://localhost:27017/pdflloom'),
       }),
     }),
     ProductsModule,

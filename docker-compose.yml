@@ -15,7 +15,7 @@ services:
     ports:
       - '3000:3000'
     environment:
-      MONGODB_URI: mongodb://mongo:27017/pdffloom
+      MONGODB_URI: mongodb://mongo:27017/pdflloom
       PORT: 3000
 
 volumes:
