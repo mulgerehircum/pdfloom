@@ -99,6 +99,18 @@ export class TemplateElement {
   @Prop()
   backgroundColor?: string;
 
+  // Linear-gradient background — takes over from the plain backgroundColor above when both
+  // stops are set (see template-compiler.ts), so an element can have either a solid fill or
+  // a two-stop gradient, never both at once.
+  @Prop()
+  gradientFrom?: string;
+
+  @Prop()
+  gradientTo?: string;
+
+  @Prop({ default: 135 })
+  gradientAngle?: number;
+
   @Prop()
   borderRadius?: number;
 
@@ -164,6 +176,17 @@ export class Template {
   @Prop()
   pageBackgroundColor?: string;
 
+  // Page-level gradient — same override relationship with pageBackgroundColor as an
+  // element's gradientFrom/To has with its own backgroundColor.
+  @Prop()
+  pageGradientFrom?: string;
+
+  @Prop()
+  pageGradientTo?: string;
+
+  @Prop({ default: 135 })
+  pageGradientAngle?: number;
+
   @Prop({ type: [TemplateElementSchema], default: [] })
   elements: TemplateElement[];
 
@@ -177,6 +200,16 @@ export class Template {
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true })
   createdBy: Types.ObjectId;
+
+  // Opts a template into the public gallery (browsable/clonable by anyone) — separate from
+  // ownership, which stays with the original creator regardless of sharing.
+  @Prop({ default: false, index: true })
+  shared: boolean;
+
+  // Freemium gate — enforced client-side only for now (lock icon + upgrade prompt on
+  // 'premium' templates in the gallery). No payment/billing backs this yet.
+  @Prop({ enum: ['free', 'premium'], default: 'free' })
+  tier: 'free' | 'premium';
 }
 
 export const TemplateSchema = SchemaFactory.createForClass(Template);

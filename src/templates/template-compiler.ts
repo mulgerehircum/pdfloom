@@ -22,6 +22,25 @@ function sanitizeColor(value?: string): string {
   return value && COLOR_PATTERN.test(value) ? value : '';
 }
 
+// Degrees for a CSS linear-gradient angle — any finite number is valid CSS, so this only
+// guards against NaN/Infinity sneaking in from a hand-crafted request, same spirit as the
+// other sanitize* helpers here.
+function sanitizeGradientAngle(value?: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 135;
+}
+
+// Builds a `background: linear-gradient(...)` declaration when both stops are present and
+// valid, else falls back to a plain `background-color`/`background` from soloColor — mirrors
+// how a solid color and a gradient are mutually exclusive on the same box.
+function compileBackground(prop: string, soloColor: string, from?: string, to?: string, angle?: number): string {
+  const fromColor = sanitizeColor(from);
+  const toColor = sanitizeColor(to);
+  if (fromColor && toColor) {
+    return `${prop}:linear-gradient(${sanitizeGradientAngle(angle)}deg, ${fromColor}, ${toColor});`;
+  }
+  return soloColor ? `${prop}:${soloColor};` : '';
+}
+
 // fontFamily comes from a fixed dropdown (see GOOGLE_FONTS) — validated here too, both as
 // defense in depth against a hand-crafted request and because this is also what decides
 // which Google Fonts stylesheet actually gets linked in the compiled page's <head>.
@@ -78,12 +97,13 @@ function compileTableCell(c: TableColumn): string {
 function compileElement(el: TemplateElement): string {
   const color = sanitizeColor(el.color);
   const backgroundColor = sanitizeColor(el.backgroundColor);
+  const background = compileBackground('background', backgroundColor, el.gradientFrom, el.gradientTo, el.gradientAngle);
   const fontFamily = sanitizeFontFamily(el.fontFamily);
   const boxShadow = sanitizeBoxShadow(el.boxShadow);
   const style =
     `left:${el.x}px; top:${el.y}px; width:${el.width}px; height:${el.height}px; font-size:${el.fontSize ?? 12}px;` +
     (color ? ` color:${color};` : '') +
-    (backgroundColor ? ` background-color:${backgroundColor};` : '') +
+    (background ? ` ${background}` : '') +
     (typeof el.borderRadius === 'number' ? ` border-radius:${el.borderRadius}px;` : '') +
     (boxShadow ? ` box-shadow:${boxShadow};` : '') +
     // Quoted (Google Fonts names can contain spaces) with the page's default sans-serif as a
@@ -157,11 +177,17 @@ export function compileTemplateToHtml(template: {
   pageWidth: number;
   pageHeight: number;
   pageBackgroundColor?: string;
+  pageGradientFrom?: string;
+  pageGradientTo?: string;
+  pageGradientAngle?: number;
   pageCount?: number;
   elements: TemplateElement[];
 }): string {
   const pageCount = template.pageCount ?? 1;
   const pageBackgroundColor = sanitizeColor(template.pageBackgroundColor) || '#fff';
+  const pageBackground =
+    compileBackground('background', pageBackgroundColor, template.pageGradientFrom, template.pageGradientTo, template.pageGradientAngle) ||
+    `background:${pageBackgroundColor};`;
 
   // One .page div per page, each holding only the elements placed on it (element.page is
   // 0-indexed). page-break-after forces Puppeteer's print-to-PDF to start a new PDF page at
@@ -193,7 +219,7 @@ ${googleFontsLink}<style>
   body { margin: 0; font-family: Helvetica, Arial, sans-serif; background: #fff; }
   /* Explicit white — without it, Puppeteer's screenshot() (preview-image) renders the
      unset background as black, unlike pdf() which happens to default to white paper. */
-  .page { position: relative; width: ${template.pageWidth}px; height: ${template.pageHeight}px; overflow: hidden; page-break-after: always; background: ${pageBackgroundColor}; }
+  .page { position: relative; width: ${template.pageWidth}px; height: ${template.pageHeight}px; overflow: hidden; page-break-after: always; ${pageBackground} }
   .page:last-child { page-break-after: auto; }
   .el { position: absolute; box-sizing: border-box; overflow: hidden; padding: 2px 4px; white-space: nowrap; }
   .el table { white-space: normal; }
