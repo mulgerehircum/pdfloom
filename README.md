@@ -1,6 +1,6 @@
-# Inventory Manager
+# PDFloom
 
-A small inventory/stock-tracking API built to demonstrate a NestJS + MongoDB + Handlebars-to-PDF stack, plus a drag-and-drop PDF template designer.
+A drag-and-drop PDF template designer with live preview and data binding, built on a NestJS + MongoDB + Handlebars-to-PDF stack — bundled here with an inventory/stock-tracking API as its first real data source.
 
 ## Stack
 
