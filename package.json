@@ -1,7 +1,7 @@
 {
-  "name": "inventory-manager",
+  "name": "pdffloom",
   "version": "0.0.1",
-  "description": "",
+  "description": "PDFloom — PDF template designer and report generation API",
   "author": "",
   "private": true,
   "license": "UNLICENSED",

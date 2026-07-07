@@ -1,6 +1,6 @@
-# Inventory Manager
+# PDFloom
 
-A small inventory/stock-tracking API built to demonstrate a NestJS + MongoDB + Handlebars-to-PDF stack, plus a drag-and-drop PDF template designer.
+A PDF template designer and report-generation API built on NestJS + MongoDB + Handlebars-to-PDF, with inventory/stock-tracking as the demo domain.
 
 ## Stack
 
@@ -27,7 +27,7 @@ npm install
 npm run start:dev
 ```
 
-Requires a MongoDB instance reachable at `MONGODB_URI` (defaults to `mongodb://localhost:27017/inventory-manager`). Set `JWT_SECRET` in `.env` to something real outside of local dev.
+Requires a MongoDB instance reachable at `MONGODB_URI` (defaults to `mongodb://localhost:27017/pdffloom`). Set `JWT_SECRET` in `.env` to something real outside of local dev.
 
 ## Running with Docker Compose
 

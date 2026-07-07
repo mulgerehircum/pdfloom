@@ -9,7 +9,7 @@ import { Template, TemplateSchema } from '../src/templates/schemas/template.sche
 import { User, UserSchema } from '../src/users/schemas/user.schema';
 import { compileTemplateToHtml } from '../src/templates/template-compiler';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/inventory-manager';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/pdffloom';
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 
