@@ -9,6 +9,17 @@ import { compileTemplateToHtml } from './template-compiler';
 const DEFAULT_PAGE_WIDTH = 794; // A4 at 96dpi
 const DEFAULT_PAGE_HEIGHT = 1123;
 
+// What a public gallery card actually needs — see findPublic() below for what's deliberately
+// excluded and why.
+export interface PublicTemplateSummary {
+  _id: string;
+  name: string;
+  tier: 'free' | 'premium';
+  pageWidth: number;
+  pageHeight: number;
+  elementCount: number;
+}
+
 // Mongoose's own ValidationError (e.g. a table column saved with an empty label — `required`
 // treats '' as missing) isn't something NestJS's exception filters know how to map, so left
 // uncaught it surfaces as a raw 500 instead of a 400 the frontend can actually show a message for.
@@ -52,8 +63,20 @@ export class TemplatesService {
   // The public gallery — anyone can browse these regardless of login, same spirit as
   // reports staying public in ReportsService. Ownership of the source template is
   // irrelevant here; only the `shared` flag gates visibility.
-  findPublic(): Promise<Template[]> {
-    return this.templateModel.find({ shared: true }).sort({ name: 1 }).exec();
+  //
+  // Deliberately NOT the full Template — compiledTemplate (the raw Handlebars/HTML source,
+  // effectively the product itself for a premium template) and the full elements array
+  // (which can carry embedded base64 images) have no business being in a public listing
+  // response; a gallery card only needs enough to render itself and a clone/preview action.
+  // createdBy is dropped too — no reason to expose which user authored a shared template.
+  findPublic(): Promise<PublicTemplateSummary[]> {
+    return this.templateModel
+      .aggregate<PublicTemplateSummary>([
+        { $match: { shared: true } },
+        { $sort: { name: 1 } },
+        { $project: { name: 1, tier: 1, pageWidth: 1, pageHeight: 1, elementCount: { $size: '$elements' } } },
+      ])
+      .exec();
   }
 
   // Copies a shared gallery template's layout into a new template owned by the requesting
