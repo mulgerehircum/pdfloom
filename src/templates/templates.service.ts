@@ -79,15 +79,23 @@ export class TemplatesService {
       .exec();
   }
 
+  // Public, shared-gated lookup — not ownership-checked (unlike findOwned), only the
+  // `shared` flag gates access. Used by clone() below and by ReportsService's public gallery
+  // preview-image rendering.
+  async findShared(id: string): Promise<TemplateDocument> {
+    const template = await this.templateModel.findOne({ _id: id, shared: true }).exec();
+    if (!template) {
+      throw new NotFoundException(`Shared template ${id} not found`);
+    }
+    return template;
+  }
+
   // Copies a shared gallery template's layout into a new template owned by the requesting
   // user. The clone always starts private (shared: false) and free (tier: 'free') — sharing
   // and premium status are decisions the *original* author made, not something a clone
   // inherits automatically.
   async clone(id: string, ownerId: string): Promise<Template> {
-    const source = await this.templateModel.findOne({ _id: id, shared: true }).exec();
-    if (!source) {
-      throw new NotFoundException(`Shared template ${id} not found`);
-    }
+    const source = await this.findShared(id);
 
     try {
       return await this.templateModel.create({
