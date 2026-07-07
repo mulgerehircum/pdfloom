@@ -67,6 +67,13 @@ export class TemplatesController {
     return GOOGLE_FONT_NAMES;
   }
 
+  // Public gallery — browsable without an account, same reasoning as the "fonts" route
+  // above for why this must be declared before the @Get(':id') catch-all.
+  @Get('public')
+  findPublic() {
+    return this.templatesService.findPublic();
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
@@ -83,5 +90,13 @@ export class TemplatesController {
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.templatesService.remove(id, user.userId);
+  }
+
+  // Cloning is a "save" (creates a new owned template), so it requires login just like
+  // create() — same reasoning as the class comment above about what stays public vs gated.
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/clone')
+  clone(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.templatesService.clone(id, user.userId);
   }
 }

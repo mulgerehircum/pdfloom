@@ -31,6 +31,9 @@ export class TemplatesService {
       pageWidth,
       pageHeight,
       pageBackgroundColor: dto.pageBackgroundColor,
+      pageGradientFrom: dto.pageGradientFrom,
+      pageGradientTo: dto.pageGradientTo,
+      pageGradientAngle: dto.pageGradientAngle,
       pageCount,
       elements: dto.elements as any,
     });
@@ -44,6 +47,42 @@ export class TemplatesService {
 
   findAllByOwner(ownerId: string): Promise<Template[]> {
     return this.templateModel.find({ createdBy: ownerId }).sort({ name: 1 }).exec();
+  }
+
+  // The public gallery — anyone can browse these regardless of login, same spirit as
+  // reports staying public in ReportsService. Ownership of the source template is
+  // irrelevant here; only the `shared` flag gates visibility.
+  findPublic(): Promise<Template[]> {
+    return this.templateModel.find({ shared: true }).sort({ name: 1 }).exec();
+  }
+
+  // Copies a shared gallery template's layout into a new template owned by the requesting
+  // user. The clone always starts private (shared: false) and free (tier: 'free') — sharing
+  // and premium status are decisions the *original* author made, not something a clone
+  // inherits automatically.
+  async clone(id: string, ownerId: string): Promise<Template> {
+    const source = await this.templateModel.findOne({ _id: id, shared: true }).exec();
+    if (!source) {
+      throw new NotFoundException(`Shared template ${id} not found`);
+    }
+
+    try {
+      return await this.templateModel.create({
+        name: `${source.name} (Copy)`,
+        pageWidth: source.pageWidth,
+        pageHeight: source.pageHeight,
+        pageBackgroundColor: source.pageBackgroundColor,
+        pageGradientFrom: source.pageGradientFrom,
+        pageGradientTo: source.pageGradientTo,
+        pageGradientAngle: source.pageGradientAngle,
+        pageCount: source.pageCount,
+        elements: source.elements,
+        compiledTemplate: source.compiledTemplate,
+        createdBy: ownerId,
+      });
+    } catch (err) {
+      toHttpError(err);
+    }
   }
 
   // Unrestricted by ownership — used internally by ReportsService to render a template's
@@ -72,9 +111,21 @@ export class TemplatesService {
     const pageWidth = dto.pageWidth ?? existing.pageWidth;
     const pageHeight = dto.pageHeight ?? existing.pageHeight;
     const pageBackgroundColor = dto.pageBackgroundColor ?? existing.pageBackgroundColor;
+    const pageGradientFrom = dto.pageGradientFrom ?? existing.pageGradientFrom;
+    const pageGradientTo = dto.pageGradientTo ?? existing.pageGradientTo;
+    const pageGradientAngle = dto.pageGradientAngle ?? existing.pageGradientAngle;
     const pageCount = dto.pageCount ?? existing.pageCount;
     const elements = (dto.elements as any) ?? existing.elements;
-    const compiledTemplate = compileTemplateToHtml({ pageWidth, pageHeight, pageBackgroundColor, pageCount, elements });
+    const compiledTemplate = compileTemplateToHtml({
+      pageWidth,
+      pageHeight,
+      pageBackgroundColor,
+      pageGradientFrom,
+      pageGradientTo,
+      pageGradientAngle,
+      pageCount,
+      elements,
+    });
 
     let updated: TemplateDocument | null;
     try {
@@ -83,7 +134,18 @@ export class TemplatesService {
       updated = await this.templateModel
         .findByIdAndUpdate(
           id,
-          { ...dto, pageWidth, pageHeight, pageBackgroundColor, pageCount, elements, compiledTemplate },
+          {
+            ...dto,
+            pageWidth,
+            pageHeight,
+            pageBackgroundColor,
+            pageGradientFrom,
+            pageGradientTo,
+            pageGradientAngle,
+            pageCount,
+            elements,
+            compiledTemplate,
+          },
           { new: true, runValidators: true }
         )
         .exec();

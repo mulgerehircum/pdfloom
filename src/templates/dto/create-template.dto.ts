@@ -116,6 +116,18 @@ export class TemplateElementDto {
   @IsOptional()
   backgroundColor?: string;
 
+  @IsString()
+  @IsOptional()
+  gradientFrom?: string;
+
+  @IsString()
+  @IsOptional()
+  gradientTo?: string;
+
+  @IsNumber()
+  @IsOptional()
+  gradientAngle?: number;
+
   @IsNumber()
   @IsOptional()
   borderRadius?: number;
@@ -159,6 +171,18 @@ export class CreateTemplateDto {
   @IsOptional()
   pageBackgroundColor?: string;
 
+  @IsString()
+  @IsOptional()
+  pageGradientFrom?: string;
+
+  @IsString()
+  @IsOptional()
+  pageGradientTo?: string;
+
+  @IsNumber()
+  @IsOptional()
+  pageGradientAngle?: number;
+
   @IsNumber()
   @IsOptional()
   @Min(1)
@@ -168,4 +192,12 @@ export class CreateTemplateDto {
   @Type(() => TemplateElementDto)
   @ArrayMinSize(1)
   elements: TemplateElementDto[];
+
+  @IsBoolean()
+  @IsOptional()
+  shared?: boolean;
+
+  @IsIn(['free', 'premium'])
+  @IsOptional()
+  tier?: 'free' | 'premium';
 }
