@@ -67,8 +67,16 @@ export class ReportsController {
   // being logged into) the template. No guard needed, so passthrough + res.send works fine
   // here (see the comment on getTemplatePreviewImage for why that combination breaks with a
   // guard in front of it).
+  //
+  // Cached — unlike the owner's own picker above (which should always show a fresh render of
+  // whatever they're actively editing), a gallery thumbnail rendering via headless Chromium
+  // on every single visitor's request is the actual reason these were slow to load. Templates
+  // in the gallery don't change often, so an hour of freshness plus a day of
+  // stale-while-revalidate (serve the cached image instantly, re-render in the background)
+  // makes repeat/cross-visitor loads near-instant without needing any custom cache of our own.
   @Get('public/:templateId/preview-image')
   @Header('Content-Type', 'image/png')
+  @Header('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
   async getPublicTemplatePreviewImage(
     @Param('templateId') templateId: string,
     @Query('width') width: string | undefined,
