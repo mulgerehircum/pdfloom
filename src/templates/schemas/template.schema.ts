@@ -9,6 +9,24 @@ export type ElementType = 'text' | 'field' | 'table' | 'image' | 'panel' | 'char
 export type TextAlign = 'left' | 'center' | 'right';
 export const TEXT_ALIGN_VALUES: TextAlign[] = ['left', 'center', 'right'];
 
+// 'solid' (or unset) uses the plain backgroundColor prop; the three gradient fills all use
+// gradientStops/gradientAngle below — only which CSS gradient function gets built differs
+// (see template-compiler.ts's compileBackground).
+export type BackgroundFill = 'solid' | 'linear' | 'radial' | 'conic';
+export const BACKGROUND_FILL_VALUES: BackgroundFill[] = ['solid', 'linear', 'radial', 'conic'];
+
+@Schema({ _id: false })
+export class GradientStop {
+  @Prop({ required: true })
+  color: string;
+
+  // 0-100, position along the gradient — for 'linear' this is distance along the angled
+  // line, for 'radial' distance from center, for 'conic' degrees-as-percent around the circle.
+  @Prop({ required: true, min: 0, max: 100 })
+  position: number;
+}
+export const GradientStopSchema = SchemaFactory.createForClass(GradientStop);
+
 @Schema({ _id: false })
 export class TableColumn {
   @Prop({ required: true })
@@ -99,15 +117,17 @@ export class TemplateElement {
   @Prop()
   backgroundColor?: string;
 
-  // Linear-gradient background — takes over from the plain backgroundColor above when both
-  // stops are set (see template-compiler.ts), so an element can have either a solid fill or
-  // a two-stop gradient, never both at once.
-  @Prop()
-  gradientFrom?: string;
+  // Gradient background — takes over from the plain backgroundColor above whenever fill is
+  // anything but 'solid' and at least 2 stops are present (see template-compiler.ts), so an
+  // element has either a solid fill or a gradient, never both at once.
+  @Prop({ enum: BACKGROUND_FILL_VALUES, default: 'solid' })
+  backgroundFill?: BackgroundFill;
 
-  @Prop()
-  gradientTo?: string;
+  @Prop({ type: [GradientStopSchema], default: undefined })
+  gradientStops?: GradientStop[];
 
+  // Degrees — meaningful for 'linear' (direction of the line) and 'conic' (start angle);
+  // ignored for 'radial', which is always centered.
   @Prop({ default: 135 })
   gradientAngle?: number;
 
@@ -176,13 +196,14 @@ export class Template {
   @Prop()
   pageBackgroundColor?: string;
 
-  // Page-level gradient — same override relationship with pageBackgroundColor as an
-  // element's gradientFrom/To has with its own backgroundColor.
-  @Prop()
-  pageGradientFrom?: string;
+  // Page-level gradient — same fill/stops/angle model and override relationship with
+  // pageBackgroundColor as an element's backgroundFill/gradientStops has with its own
+  // backgroundColor.
+  @Prop({ enum: BACKGROUND_FILL_VALUES, default: 'solid' })
+  pageBackgroundFill?: BackgroundFill;
 
-  @Prop()
-  pageGradientTo?: string;
+  @Prop({ type: [GradientStopSchema], default: undefined })
+  pageGradientStops?: GradientStop[];
 
   @Prop({ default: 135 })
   pageGradientAngle?: number;
