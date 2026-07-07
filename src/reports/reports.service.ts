@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as handlebars from 'handlebars';
-import puppeteer from 'puppeteer';
+import { launchBrowser } from './puppeteer-launcher';
 import { ProductsService } from '../products/products.service';
 import { Product } from '../products/schemas/product.schema';
 import { TemplatesService } from '../templates/templates.service';
@@ -115,11 +115,7 @@ export class ReportsService {
   }
 
   private async renderHtmlToPdf(html: string, margin = { top: '20px', bottom: '20px' }): Promise<Buffer> {
-    const browser = await puppeteer.launch({
-      headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    const browser = await launchBrowser();
 
     try {
       const page = await browser.newPage();
@@ -151,11 +147,7 @@ export class ReportsService {
     const scale = clampedWidth / pageWidth;
     const clampedHeight = Math.round(pageHeight * scale);
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    const browser = await launchBrowser();
 
     try {
       const page = await browser.newPage();
