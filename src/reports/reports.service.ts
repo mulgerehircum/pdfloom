@@ -13,6 +13,20 @@ const DEFAULT_PAGE_WIDTH = 794;
 const DEFAULT_PAGE_HEIGHT = 1123;
 const MIN_PREVIEW_WIDTH = 40; // guards against a degenerate/zero-size screenshot request
 
+// Back 'chart' elements (see template-compiler.ts) — registered once on this module-level
+// handlebars instance, so every compile() call below picks them up. maxOf/percentOf run at
+// *render* time against the real array, not baked in when the template was saved, so a
+// chart's bar heights stay correct as the underlying data changes, same as a table's rows.
+handlebars.registerHelper('maxOf', (arr: unknown, field: string) => {
+  if (!Array.isArray(arr) || arr.length === 0) return 0;
+  return Math.max(...arr.map((item) => Number((item as Record<string, unknown>)?.[field]) || 0));
+});
+handlebars.registerHelper('percentOf', (value: unknown, max: unknown) => {
+  const v = Number(value) || 0;
+  const m = Number(max) || 0;
+  return m > 0 ? Math.round((v / m) * 100) : 0;
+});
+
 export interface ReportProductRow {
   sku: string;
   name: string;
@@ -30,6 +44,7 @@ export interface ReportContext {
   totalSkus: number;
   unitsInStock: number;
   needsRestocking: number;
+  avgUnitPrice: string;
 }
 
 // The template editor's field/column pickers read this instead of a hand-maintained list —
@@ -92,10 +107,11 @@ export class ReportsService {
     const totalSkus = rows.length;
     const unitsInStock = rows.reduce((sum, row) => sum + row.quantity, 0);
     const needsRestocking = rows.filter((row) => row.isLowStock).length;
+    const avgUnitPrice = (rows.length ? rows.reduce((sum, row) => sum + Number(row.unitPrice), 0) / rows.length : 0).toFixed(2);
 
     const generatedAt = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
 
-    return { generatedAt, products: rows, totalValue, totalSkus, unitsInStock, needsRestocking };
+    return { generatedAt, products: rows, totalValue, totalSkus, unitsInStock, needsRestocking, avgUnitPrice };
   }
 
   private async renderHtmlToPdf(html: string, margin = { top: '20px', bottom: '20px' }): Promise<Buffer> {

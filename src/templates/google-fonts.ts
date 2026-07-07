@@ -18,6 +18,8 @@ export const GOOGLE_FONTS: GoogleFont[] = [
   { name: 'Source Sans 3', googleFamily: 'Source+Sans+3' },
   { name: 'Poppins', googleFamily: 'Poppins' },
   { name: 'JetBrains Mono', googleFamily: 'JetBrains+Mono' },
+  { name: 'Space Grotesk', googleFamily: 'Space+Grotesk' },
+  { name: 'Source Serif 4', googleFamily: 'Source+Serif+4' },
 ];
 
 export const GOOGLE_FONT_NAMES = GOOGLE_FONTS.map((f) => f.name);

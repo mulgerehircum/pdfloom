@@ -66,8 +66,8 @@ export class TemplateElementDto {
   @IsNotEmpty()
   id: string;
 
-  @IsIn(['text', 'field', 'table', 'image', 'panel'])
-  type: 'text' | 'field' | 'table' | 'image' | 'panel';
+  @IsIn(['text', 'field', 'table', 'image', 'panel', 'chart'])
+  type: 'text' | 'field' | 'table' | 'image' | 'panel' | 'chart';
 
   @IsNumber()
   x: number;
@@ -122,6 +122,10 @@ export class TemplateElementDto {
 
   @IsString()
   @IsOptional()
+  boxShadow?: string;
+
+  @IsString()
+  @IsOptional()
   content?: string;
 
   @IsString()
@@ -136,6 +140,18 @@ export class TemplateElementDto {
   @Type(() => TableColumnDto)
   @IsOptional()
   columns?: TableColumnDto[];
+
+  @IsString()
+  @IsOptional()
+  chartValueField?: string;
+
+  @IsString()
+  @IsOptional()
+  chartLabelField?: string;
+
+  @IsString()
+  @IsOptional()
+  chartBarColor?: string;
 
   @IsString()
   @IsOptional()

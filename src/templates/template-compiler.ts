@@ -33,6 +33,16 @@ function sanitizeTextAlign(value?: TextAlign): TextAlign | '' {
   return value && TEXT_ALIGN_VALUES.includes(value) ? value : '';
 }
 
+// box-shadow syntax has too many legitimate shapes (multiple offsets, spread, inset, several
+// comma-separated shadows) for a strict pattern like sanitizeColor's — this allow-lists the
+// characters that occur in any of them instead, which still blocks anything that could break
+// out of the style="..." attribute or inject a new CSS declaration.
+const BOX_SHADOW_PATTERN = /^[a-zA-Z0-9#(),.\-%\s]*$/;
+
+function sanitizeBoxShadow(value?: string): string {
+  return value && BOX_SHADOW_PATTERN.test(value) ? value : '';
+}
+
 // imageData comes from an authenticated upload endpoint, but validate the shape anyway
 // before splicing it into an HTML attribute — base64 can't contain quotes/angle-brackets,
 // so this is defense in depth against a hand-crafted API request, not the normal path.
@@ -69,11 +79,13 @@ function compileElement(el: TemplateElement): string {
   const color = sanitizeColor(el.color);
   const backgroundColor = sanitizeColor(el.backgroundColor);
   const fontFamily = sanitizeFontFamily(el.fontFamily);
+  const boxShadow = sanitizeBoxShadow(el.boxShadow);
   const style =
     `left:${el.x}px; top:${el.y}px; width:${el.width}px; height:${el.height}px; font-size:${el.fontSize ?? 12}px;` +
     (color ? ` color:${color};` : '') +
     (backgroundColor ? ` background-color:${backgroundColor};` : '') +
     (typeof el.borderRadius === 'number' ? ` border-radius:${el.borderRadius}px;` : '') +
+    (boxShadow ? ` box-shadow:${boxShadow};` : '') +
     // Quoted (Google Fonts names can contain spaces) with the page's default sans-serif as a
     // fallback, same as an unset fontFamily already gets via the <body> rule.
     (fontFamily ? ` font-family:'${fontFamily}', Helvetica, Arial, sans-serif;` : '') +
@@ -116,6 +128,25 @@ function compileElement(el: TemplateElement): string {
     // placed on top of it).
     case 'panel':
       return `<div class="el panel-el" style="${style}"></div>`;
+
+    // A real (not fabricated) bar chart over the same itemsPath array a table would use.
+    // Bar heights are normalized against the max value in that array *at render time* (via
+    // the maxOf/percentOf Handlebars helpers registered in reports.service.ts), not computed
+    // here at save time — so the chart stays correct as the underlying data changes, the same
+    // way a table's rows do.
+    case 'chart': {
+      const itemsPath = sanitizeFieldPath(el.itemsPath ?? 'products');
+      const valueField = sanitizeFieldPath(el.chartValueField ?? '');
+      const labelField = sanitizeFieldPath(el.chartLabelField ?? '');
+      const barColor = sanitizeColor(el.chartBarColor) || '#1f9d6e';
+      const labelHtml = labelField ? `<div class="chart-bar-label">{{ this.${labelField} }}</div>` : '';
+      return (
+        `<div class="el chart-el" style="${style}"><div class="chart-bars">` +
+        `{{#each ${itemsPath}}}<div class="chart-bar-col">` +
+        `<div class="chart-bar" style="height:{{percentOf this.${valueField} (maxOf @root.${itemsPath} '${valueField}')}}%;background:${barColor}"></div>` +
+        `${labelHtml}</div>{{/each}}</div></div>`
+      );
+    }
 
     default:
       return '';
@@ -175,6 +206,10 @@ ${googleFontsLink}<style>
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1px solid #ccc; padding: 4px 6px; font-size: inherit; text-align: left; }
   .badge { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-weight: 700; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 6px; width: 100%; height: 100%; }
+  .chart-bar-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .chart-bar { width: 100%; min-height: 2px; border-radius: 3px 3px 0 0; }
+  .chart-bar-label { margin-top: 4px; font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 </style>
 </head>
 <body>

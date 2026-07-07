@@ -5,7 +5,7 @@ import { GOOGLE_FONT_NAMES } from '../google-fonts';
 
 export type TemplateDocument = Template & Document;
 
-export type ElementType = 'text' | 'field' | 'table' | 'image' | 'panel';
+export type ElementType = 'text' | 'field' | 'table' | 'image' | 'panel' | 'chart';
 export type TextAlign = 'left' | 'center' | 'right';
 export const TEXT_ALIGN_VALUES: TextAlign[] = ['left', 'center', 'right'];
 
@@ -55,7 +55,7 @@ export class TemplateElement {
   @Prop({ required: true })
   id: string;
 
-  @Prop({ required: true, enum: ['text', 'field', 'table', 'image', 'panel'] })
+  @Prop({ required: true, enum: ['text', 'field', 'table', 'image', 'panel', 'chart'] })
   type: ElementType;
 
   @Prop({ required: true })
@@ -102,6 +102,13 @@ export class TemplateElement {
   @Prop()
   borderRadius?: number;
 
+  // Raw CSS box-shadow value (e.g. "6px 6px 0 #111" or "0 0 24px rgba(124,247,196,.4)") —
+  // sanitized by denylist (template-compiler.ts) rather than a strict allow-list regex like
+  // color, since box-shadow syntax has too many legitimate shapes (multiple offsets, spread,
+  // inset, commas for multiple shadows) to enumerate.
+  @Prop()
+  boxShadow?: string;
+
   // 'text' elements: literal content rendered as-is.
   @Prop()
   content?: string;
@@ -117,6 +124,20 @@ export class TemplateElement {
 
   @Prop({ type: [TableColumnSchema], default: undefined })
   columns?: TableColumn[];
+
+  // 'chart' elements: a real (not fabricated) bar chart over the same itemsPath array a
+  // table would use — chartValueField is the numeric field each bar's height derives from
+  // (normalized against the max value in the array at render time, not baked in at save
+  // time, so it stays correct as the underlying data changes), chartLabelField is the
+  // optional text under each bar.
+  @Prop()
+  chartValueField?: string;
+
+  @Prop()
+  chartLabelField?: string;
+
+  @Prop()
+  chartBarColor?: string;
 
   // 'image' elements: a data: URI (base64), produced by POST /templates/upload-image.
   // Embedded directly rather than stored as a separate file — no static file serving or
