@@ -31,8 +31,8 @@ export class TemplatesService {
       pageWidth,
       pageHeight,
       pageBackgroundColor: dto.pageBackgroundColor,
-      pageGradientFrom: dto.pageGradientFrom,
-      pageGradientTo: dto.pageGradientTo,
+      pageBackgroundFill: dto.pageBackgroundFill,
+      pageGradientStops: dto.pageGradientStops as any,
       pageGradientAngle: dto.pageGradientAngle,
       pageCount,
       elements: dto.elements as any,
@@ -72,8 +72,8 @@ export class TemplatesService {
         pageWidth: source.pageWidth,
         pageHeight: source.pageHeight,
         pageBackgroundColor: source.pageBackgroundColor,
-        pageGradientFrom: source.pageGradientFrom,
-        pageGradientTo: source.pageGradientTo,
+        pageBackgroundFill: source.pageBackgroundFill,
+        pageGradientStops: source.pageGradientStops,
         pageGradientAngle: source.pageGradientAngle,
         pageCount: source.pageCount,
         elements: source.elements,
@@ -111,8 +111,8 @@ export class TemplatesService {
     const pageWidth = dto.pageWidth ?? existing.pageWidth;
     const pageHeight = dto.pageHeight ?? existing.pageHeight;
     const pageBackgroundColor = dto.pageBackgroundColor ?? existing.pageBackgroundColor;
-    const pageGradientFrom = dto.pageGradientFrom ?? existing.pageGradientFrom;
-    const pageGradientTo = dto.pageGradientTo ?? existing.pageGradientTo;
+    const pageBackgroundFill = dto.pageBackgroundFill ?? existing.pageBackgroundFill;
+    const pageGradientStops = (dto.pageGradientStops as any) ?? existing.pageGradientStops;
     const pageGradientAngle = dto.pageGradientAngle ?? existing.pageGradientAngle;
     const pageCount = dto.pageCount ?? existing.pageCount;
     const elements = (dto.elements as any) ?? existing.elements;
@@ -120,8 +120,8 @@ export class TemplatesService {
       pageWidth,
       pageHeight,
       pageBackgroundColor,
-      pageGradientFrom,
-      pageGradientTo,
+      pageBackgroundFill,
+      pageGradientStops,
       pageGradientAngle,
       pageCount,
       elements,
@@ -139,8 +139,8 @@ export class TemplatesService {
             pageWidth,
             pageHeight,
             pageBackgroundColor,
-            pageGradientFrom,
-            pageGradientTo,
+            pageBackgroundFill,
+            pageGradientStops,
             pageGradientAngle,
             pageCount,
             elements,

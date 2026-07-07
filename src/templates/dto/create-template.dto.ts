@@ -7,12 +7,24 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { GOOGLE_FONT_NAMES } from '../google-fonts';
-import { TEXT_ALIGN_VALUES } from '../schemas/template.schema';
-import type { TextAlign } from '../schemas/template.schema';
+import { BACKGROUND_FILL_VALUES, TEXT_ALIGN_VALUES } from '../schemas/template.schema';
+import type { BackgroundFill, TextAlign } from '../schemas/template.schema';
+
+export class GradientStopDto {
+  @IsString()
+  @IsNotEmpty()
+  color: string;
+
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  position: number;
+}
 
 export class TableColumnDto {
   // Cosmetic display text only — empty is a valid value (e.g. mid-edit while retyping,
@@ -116,13 +128,14 @@ export class TemplateElementDto {
   @IsOptional()
   backgroundColor?: string;
 
-  @IsString()
+  @IsIn(BACKGROUND_FILL_VALUES)
   @IsOptional()
-  gradientFrom?: string;
+  backgroundFill?: BackgroundFill;
 
-  @IsString()
+  @ValidateNested({ each: true })
+  @Type(() => GradientStopDto)
   @IsOptional()
-  gradientTo?: string;
+  gradientStops?: GradientStopDto[];
 
   @IsNumber()
   @IsOptional()
@@ -171,13 +184,14 @@ export class CreateTemplateDto {
   @IsOptional()
   pageBackgroundColor?: string;
 
-  @IsString()
+  @IsIn(BACKGROUND_FILL_VALUES)
   @IsOptional()
-  pageGradientFrom?: string;
+  pageBackgroundFill?: BackgroundFill;
 
-  @IsString()
+  @ValidateNested({ each: true })
+  @Type(() => GradientStopDto)
   @IsOptional()
-  pageGradientTo?: string;
+  pageGradientStops?: GradientStopDto[];
 
   @IsNumber()
   @IsOptional()

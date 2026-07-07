@@ -1,4 +1,4 @@
-import { TableColumn, TemplateElement, TextAlign, TEXT_ALIGN_VALUES } from './schemas/template.schema';
+import { BackgroundFill, GradientStop, TableColumn, TemplateElement, TextAlign, TEXT_ALIGN_VALUES } from './schemas/template.schema';
 import { findGoogleFont } from './google-fonts';
 
 // Field/table paths come from a fixed dropdown on the frontend, but sanitize anyway
@@ -22,21 +22,42 @@ function sanitizeColor(value?: string): string {
   return value && COLOR_PATTERN.test(value) ? value : '';
 }
 
-// Degrees for a CSS linear-gradient angle — any finite number is valid CSS, so this only
-// guards against NaN/Infinity sneaking in from a hand-crafted request, same spirit as the
-// other sanitize* helpers here.
+// Degrees for a CSS gradient angle — any finite number is valid CSS, so this only guards
+// against NaN/Infinity sneaking in from a hand-crafted request, same spirit as the other
+// sanitize* helpers here.
 function sanitizeGradientAngle(value?: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 135;
 }
 
-// Builds a `background: linear-gradient(...)` declaration when both stops are present and
-// valid, else falls back to a plain `background-color`/`background` from soloColor — mirrors
-// how a solid color and a gradient are mutually exclusive on the same box.
-function compileBackground(prop: string, soloColor: string, from?: string, to?: string, angle?: number): string {
-  const fromColor = sanitizeColor(from);
-  const toColor = sanitizeColor(to);
-  if (fromColor && toColor) {
-    return `${prop}:linear-gradient(${sanitizeGradientAngle(angle)}deg, ${fromColor}, ${toColor});`;
+// 0-100 clamp for a stop's position — a hand-crafted request could send anything, but every
+// gradient function below assumes a percentage.
+function sanitizeStopPosition(value: number): number {
+  return Math.min(100, Math.max(0, typeof value === 'number' && Number.isFinite(value) ? value : 0));
+}
+
+// Sanitizes each stop's color, drops any stop with an invalid color, and sorts by position —
+// CSS gradients render stops in the order given, so an out-of-order list (e.g. from a UI drag
+// or a hand-crafted request) would visibly render wrong even though every individual stop is
+// valid.
+function sanitizeStops(stops?: GradientStop[]): { color: string; position: number }[] {
+  return (stops ?? [])
+    .map((s) => ({ color: sanitizeColor(s.color), position: sanitizeStopPosition(s.position) }))
+    .filter((s) => !!s.color)
+    .sort((a, b) => a.position - b.position);
+}
+
+// Builds a `background: <fn>-gradient(...)` declaration for the given fill type when at
+// least 2 valid stops are present, else falls back to a plain `background`/`background-color`
+// from soloColor — a solid fill and a gradient are mutually exclusive on the same box, same
+// as before.
+function compileBackground(prop: string, soloColor: string, fill?: BackgroundFill, stops?: GradientStop[], angle?: number): string {
+  const sanitizedStops = fill && fill !== 'solid' ? sanitizeStops(stops) : [];
+  if (sanitizedStops.length >= 2) {
+    const stopList = sanitizedStops.map((s) => `${s.color} ${s.position}%`).join(', ');
+    const deg = sanitizeGradientAngle(angle);
+    if (fill === 'radial') return `${prop}:radial-gradient(circle, ${stopList});`;
+    if (fill === 'conic') return `${prop}:conic-gradient(from ${deg}deg, ${stopList});`;
+    return `${prop}:linear-gradient(${deg}deg, ${stopList});`;
   }
   return soloColor ? `${prop}:${soloColor};` : '';
 }
@@ -87,7 +108,7 @@ function compileTableCell(c: TableColumn): string {
 function compileElement(el: TemplateElement): string {
   const color = sanitizeColor(el.color);
   const backgroundColor = sanitizeColor(el.backgroundColor);
-  const background = compileBackground('background', backgroundColor, el.gradientFrom, el.gradientTo, el.gradientAngle);
+  const background = compileBackground('background', backgroundColor, el.backgroundFill, el.gradientStops, el.gradientAngle);
   const fontFamily = sanitizeFontFamily(el.fontFamily);
   const style =
     `left:${el.x}px; top:${el.y}px; width:${el.width}px; height:${el.height}px; font-size:${el.fontSize ?? 12}px;` +
@@ -146,8 +167,8 @@ export function compileTemplateToHtml(template: {
   pageWidth: number;
   pageHeight: number;
   pageBackgroundColor?: string;
-  pageGradientFrom?: string;
-  pageGradientTo?: string;
+  pageBackgroundFill?: BackgroundFill;
+  pageGradientStops?: GradientStop[];
   pageGradientAngle?: number;
   pageCount?: number;
   elements: TemplateElement[];
@@ -155,7 +176,7 @@ export function compileTemplateToHtml(template: {
   const pageCount = template.pageCount ?? 1;
   const pageBackgroundColor = sanitizeColor(template.pageBackgroundColor) || '#fff';
   const pageBackground =
-    compileBackground('background', pageBackgroundColor, template.pageGradientFrom, template.pageGradientTo, template.pageGradientAngle) ||
+    compileBackground('background', pageBackgroundColor, template.pageBackgroundFill, template.pageGradientStops, template.pageGradientAngle) ||
     `background:${pageBackgroundColor};`;
 
   // One .page div per page, each holding only the elements placed on it (element.page is
