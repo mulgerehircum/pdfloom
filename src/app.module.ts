@@ -9,6 +9,7 @@ import { ReportsModule } from './reports/reports.module';
 import { TemplatesModule } from './templates/templates.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { LandingModule } from './landing/landing.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AuthModule } from './auth/auth.module';
     TemplatesModule,
     UsersModule,
     AuthModule,
+    LandingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

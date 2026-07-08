@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDFloom — PDF Template Designer for Inventory Reports</title>
+<meta name="description" content="PDFloom is a drag-and-drop PDF template editor for inventory reports, invoices, and packing slips. Bind tables to live inventory data, pick your own fonts and colors, and preview the real PDF instantly — no signup required to try.">
+<style>
+  :root {
+    --color-bg: #12181a;
+    --color-surface: #1a2224;
+    --color-border: #29393b;
+    --color-border-strong: #3a4d4f;
+    --color-text: #e6ebea;
+    --color-text-muted: #8fa19e;
+    --color-text-faint: #66756f;
+
+    --color-primary: #2bb4a8;
+    --color-primary-hover: #3fc9bc;
+    --color-primary-soft: #0e2e2b;
+    --color-primary-contrast: #04211e;
+
+    --color-danger: #ea6a5c;
+    --color-danger-soft: #3a201c;
+
+    --color-success: #3b8fd1;
+    --color-success-soft: #10263a;
+
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+    --space-5: 24px; --space-6: 32px; --space-7: 48px;
+
+    --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px; --radius-pill: 999px;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.45);
+
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --text-xs: 12px; --text-sm: 13px; --text-md: 14px; --text-lg: 16px; --text-xl: 20px; --text-2xl: 26px;
+  }
+
+  :root[data-theme='light'] {
+    --color-bg: #f3f8f7;
+    --color-surface: #ffffff;
+    --color-border: #d9e7e5;
+    --color-border-strong: #b7d0cd;
+    --color-text: #16221f;
+    --color-text-muted: #5c716d;
+    --color-text-faint: #8a9d99;
+
+    --color-primary: #0f7d70;
+    --color-primary-hover: #0c675c;
+    --color-primary-soft: #dff5f2;
+    --color-primary-contrast: #ffffff;
+
+    --color-danger: #d1493c;
+    --color-danger-soft: #fbeae7;
+
+    --color-success: #1f6fa8;
+    --color-success-soft: #e3f1fa;
+
+    --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+    --shadow-md: 0 4px 16px rgba(16, 24, 40, 0.08);
+    --shadow-lg: 0 16px 40px rgba(16, 24, 40, 0.14);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--color-bg); }
+  body { font-family: var(--font-sans); color: var(--color-text); min-height: 100vh; }
+  ::selection { background: var(--color-primary-soft); }
+  a { text-decoration: none; }
+
+  html { transition: background-color .25s ease; }
+  body, body * {
+    transition: background-color .25s ease, border-color .25s ease, color .25s ease;
+  }
+
+  @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+  @keyframes floatOrb { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-14px, 18px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    body, body *, html { transition: none !important; animation: none !important; }
+  }
+
+  /* ---------- Header ---------- */
+  .site-header {
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1120px; margin: 0 auto; padding: var(--space-4) var(--space-5);
+    position: sticky; top: 0; z-index: 50; background: transparent;
+    transition: background-color .3s ease, box-shadow .3s ease, backdrop-filter .3s ease;
+  }
+  .site-header.scrolled {
+    background: var(--color-bg);
+    box-shadow: 0 1px 0 var(--color-border), 0 10px 30px rgba(0, 0, 0, .12);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-name { font-size: var(--text-lg); font-weight: 800; letter-spacing: -.01em; }
+  .brand-name .pdf { color: var(--color-primary); }
+  .header-actions { display: flex; align-items: center; gap: var(--space-4); }
+  .signin-link {
+    color: var(--color-text-muted); font-size: var(--text-sm); transition: color .15s ease;
+  }
+  .signin-link:hover { color: var(--color-text); }
+  .theme-toggle {
+    display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px;
+    border-radius: var(--radius-pill); border: 1px solid var(--color-border-strong);
+    background: var(--color-surface); color: var(--color-text); cursor: pointer;
+    font-size: var(--text-xs); font-family: inherit;
+    transition: border-color .15s ease, transform .1s ease;
+  }
+  .theme-toggle:hover { border-color: var(--color-primary); }
+  .theme-toggle:active { transform: scale(.94); }
+  .theme-icon { display: inline-block; transition: transform .4s cubic-bezier(.16, 1, .3, 1); }
+  .theme-icon.is-light { transform: rotate(0deg); }
+  .theme-icon.is-dark { transform: rotate(180deg); }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    max-width: 840px; margin: 0 auto; padding: var(--space-7) var(--space-5) var(--space-6);
+    text-align: center; position: relative;
+  }
+  .hero-orb {
+    position: absolute; top: -40px; left: 50%; width: 520px; height: 320px; margin-left: -260px;
+    border-radius: 50%; background: radial-gradient(circle, var(--color-primary-soft), transparent 70%);
+    opacity: .8; pointer-events: none; z-index: 0; animation: floatOrb 9s ease-in-out infinite;
+  }
+  .hero-content { position: relative; z-index: 1; }
+  .eyebrow-pill {
+    display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px;
+    border-radius: var(--radius-pill); background: var(--color-primary-soft); color: var(--color-primary);
+    font-size: var(--text-xs); font-weight: 600; margin-bottom: var(--space-5);
+  }
+  .hero h1 {
+    margin: 0 0 var(--space-4); font-size: calc(var(--text-2xl) * 2); line-height: 1.1;
+    font-weight: 700; letter-spacing: -.02em;
+  }
+  .hero-subhead {
+    margin: 0 auto var(--space-6); max-width: 560px; font-size: var(--text-lg);
+    line-height: 1.55; color: var(--color-text-muted);
+  }
+  .hero-ctas { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: var(--space-3) var(--space-5); border-radius: var(--radius-sm);
+    font-weight: 600; font-size: var(--text-md); cursor: pointer; font-family: inherit;
+    transition: background-color .15s ease, transform .1s ease, box-shadow .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .btn:active { transform: translateY(0) scale(.98); }
+  .btn-primary { background: var(--color-primary); color: var(--color-primary-contrast); border: none; }
+  .btn-primary:hover { background: var(--color-primary-hover); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .btn-secondary {
+    background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border-strong);
+  }
+  .btn-secondary:hover { border-color: var(--color-primary); color: var(--color-primary); transform: translateY(-1px); }
+  .hero-microcopy { margin: var(--space-3) 0 0; font-size: var(--text-xs); color: var(--color-text-faint); }
+  .scroll-cue {
+    margin-top: var(--space-6); font-size: var(--text-xs); color: var(--color-text-faint);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .scroll-cue-arrow { animation: livePulse 1.8s ease-in-out infinite; }
+
+  /* ---------- Scroll-pinned editor centerpiece ---------- */
+  .editor-section { position: relative; height: calc(100vh * 4); }
+  .editor-sticky {
+    position: sticky; top: 0; height: 100vh; display: flex; align-items: center;
+    gap: var(--space-7); max-width: 1180px; margin: 0 auto; padding: 0 var(--space-5);
+  }
+  .editor-nav { flex: 0 0 280px; }
+  .editor-nav-eyebrow {
+    font-size: var(--text-xs); font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--color-primary); margin-bottom: var(--space-5);
+  }
+  .editor-nav-list {
+    position: relative; display: flex; flex-direction: column; gap: var(--space-6);
+    padding-left: var(--space-4); border-left: 2px solid var(--color-border);
+  }
+  .editor-nav-progress {
+    position: absolute; left: -2px; top: 0; width: 2px; background: var(--color-primary);
+    height: 0%; transition: height .08s linear;
+  }
+  .editor-nav-item { cursor: pointer; background: none; border: none; padding: 0; text-align: left; display: block; }
+  .editor-nav-title {
+    font-size: var(--text-md); font-weight: 700; color: var(--color-text); transition: color .3s ease;
+    font-family: inherit;
+  }
+  .editor-nav-item.is-active .editor-nav-title { color: var(--color-primary); }
+  .editor-nav-desc { font-size: var(--text-sm); color: var(--color-text-muted); margin-top: 4px; line-height: 1.5; }
+
+  .editor-mockup {
+    flex: 1; display: flex; background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden;
+    height: min(600px, 78vh);
+  }
+  .editor-toolbar {
+    width: 52px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+    gap: var(--space-3); padding: var(--space-4) 0; border-right: 1px solid var(--color-border);
+    background: var(--color-bg);
+  }
+  .editor-tool {
+    width: 32px; height: 32px; border-radius: var(--radius-sm); display: flex; align-items: center;
+    justify-content: center; font-size: var(--text-sm); font-weight: 700; color: var(--color-text-muted);
+    background: transparent; transition: background-color .3s ease, color .3s ease;
+  }
+  .editor-tool.is-active { background: var(--color-primary); color: var(--color-primary-contrast); }
+
+  .editor-canvas-area {
+    flex: 1; padding: var(--space-6); display: flex; align-items: center; justify-content: center;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 27px, var(--color-border) 27px, var(--color-border) 28px),
+      repeating-linear-gradient(90deg, transparent, transparent 27px, var(--color-border) 27px, var(--color-border) 28px);
+    background-size: 28px 28px;
+  }
+  .editor-page {
+    width: 100%; max-width: 340px; aspect-ratio: 8.5 / 11; background: var(--color-bg);
+    border: 1px solid var(--color-border-strong); border-radius: 4px; box-shadow: var(--shadow-md);
+    padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-4);
+  }
+  .editor-zone {
+    border-radius: 8px; padding: var(--space-2); opacity: .35;
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); background: transparent;
+    transition: opacity .4s ease, box-shadow .4s ease, background-color .4s ease;
+  }
+  .editor-zone.is-active {
+    opacity: 1; box-shadow: 0 0 0 3px var(--color-primary); background: var(--color-primary-soft);
+  }
+  .zone-bar-title { background: var(--color-text); border-radius: 2px; height: 14px; width: 55%; margin-bottom: 8px; }
+  .zone-bar-subtitle { background: var(--color-text-muted); opacity: .5; border-radius: 2px; height: 8px; width: 35%; }
+  .zone-row {
+    display: flex; justify-content: space-between; font-size: 11px; color: var(--color-text-muted);
+    margin-bottom: 6px;
+  }
+  .zone-row:last-child { margin-bottom: 0; }
+  .zone-pill { border-radius: 8px; padding: 1px 7px; font-weight: 700; }
+  .zone-pill.danger { background: var(--color-danger-soft); color: var(--color-danger); }
+  .zone-pill.success { background: var(--color-success-soft); color: var(--color-success); }
+  .font-swatches { display: flex; gap: 10px; margin-bottom: 8px; }
+  .font-swatch {
+    cursor: pointer; font-size: var(--text-lg); font-weight: 700; padding: 2px 6px; border-radius: 6px;
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); transition: box-shadow .2s ease; background: none; border: none;
+  }
+  .font-swatch.is-selected { box-shadow: 0 0 0 2px var(--color-primary); }
+  .font-swatch-serif { font-family: Georgia, serif; color: var(--color-text); }
+  .font-swatch-mono { font-family: 'Courier New', monospace; color: var(--color-primary); }
+  .font-swatch-italic { font-family: var(--font-sans); font-style: italic; text-decoration: underline; color: var(--color-danger); }
+  .font-preview { font-size: var(--text-sm); font-weight: 600; transition: color .2s ease; }
+  .pages-zone { margin-top: auto; }
+  .pages-thumbs { display: flex; gap: 8px; }
+  .page-thumb { width: 34px; height: 44px; border-radius: 3px; background: var(--color-bg); border: 1px solid var(--color-border-strong); }
+  .page-thumb.is-first { background: var(--color-primary-soft); border-color: var(--color-primary); }
+  .pages-caption { font-size: 10px; color: var(--color-text-faint); margin-top: 6px; }
+
+  /* ---------- Example templates ---------- */
+  .examples { max-width: 1120px; margin: 0 auto; padding: 0 var(--space-5) var(--space-7); }
+  .examples h2 {
+    margin: 0 0 var(--space-5); font-size: calc(var(--text-2xl) * 1.15); font-weight: 700;
+    letter-spacing: -.01em; text-align: center;
+  }
+  .examples-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4); }
+  .example-card {
+    background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+    overflow: hidden; box-shadow: var(--shadow-sm); opacity: 0; transform: translateY(28px);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease,
+      opacity .5s cubic-bezier(.16, 1, .3, 1), transform .5s cubic-bezier(.16, 1, .3, 1);
+  }
+  .example-card.is-revealed { opacity: 1; transform: none; }
+  .example-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--color-primary); }
+  .example-card.is-revealed:hover { transform: translateY(-3px); }
+  .example-preview {
+    aspect-ratio: 4 / 3; background:
+      repeating-linear-gradient(135deg, var(--color-border) 0px, var(--color-border) 1px, transparent 1px, transparent 12px),
+      var(--color-bg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .example-preview span { font-family: ui-monospace, monospace; font-size: var(--text-xs); color: var(--color-text-faint); }
+  .example-body { padding: var(--space-4); }
+  .example-body h3 { margin: 0 0 6px; font-size: var(--text-md); font-weight: 700; }
+  .example-body p { margin: 0 0 var(--space-3); font-size: var(--text-xs); color: var(--color-text-muted); }
+  .status-pill {
+    display: inline-flex; padding: 2px var(--space-2); border-radius: var(--radius-pill);
+    font-weight: 600; font-size: var(--text-xs);
+  }
+  .status-pill.danger { background: var(--color-danger-soft); color: var(--color-danger); }
+  .status-pill.primary { background: var(--color-primary-soft); color: var(--color-primary); }
+  .status-pill.success { background: var(--color-success-soft); color: var(--color-success); }
+  .included-toggle {
+    display: flex; align-items: center; justify-content: space-between; width: 100%;
+    margin-top: var(--space-3); padding-top: var(--space-3); border: none; border-top: 1px solid var(--color-border);
+    background: none; font-family: inherit; font-size: var(--text-xs); font-weight: 600;
+    color: var(--color-text-muted); cursor: pointer; padding-left: 0; padding-right: 0;
+  }
+  .included-chevron { display: inline-block; transition: transform .25s ease; }
+  .included-toggle.is-open .included-chevron { transform: rotate(180deg); }
+  .included-detail {
+    overflow: hidden; max-height: 0; opacity: 0; margin-top: 0;
+    transition: max-height .3s ease, opacity .3s ease, margin-top .3s ease;
+  }
+  .included-detail.is-open { max-height: 170px; opacity: 1; margin-top: 10px; }
+  .included-detail ul { margin: 0; padding-left: 18px; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.7; }
+
+  /* ---------- Final CTA ---------- */
+  .final-cta { background: var(--color-primary-soft); padding: var(--space-7) var(--space-5); text-align: center; }
+  .final-cta-inner {
+    opacity: 0; transform: translateY(28px);
+    transition: opacity .7s cubic-bezier(.16, 1, .3, 1), transform .7s cubic-bezier(.16, 1, .3, 1);
+  }
+  .final-cta-inner.is-revealed { opacity: 1; transform: none; }
+  .final-cta h2 { margin: 0 0 var(--space-3); font-size: calc(var(--text-2xl) * 1.3); font-weight: 700; letter-spacing: -.01em; }
+  .final-cta-eyebrow {
+    margin: 0 0 var(--space-2); font-size: var(--text-sm); font-weight: 600; color: var(--color-primary);
+    letter-spacing: .02em; text-transform: uppercase;
+  }
+  .final-cta p.body { margin: 0 auto var(--space-5); max-width: 480px; font-size: var(--text-md); color: var(--color-text-muted); }
+
+  /* ---------- Footer ---------- */
+  .site-footer { max-width: 1120px; margin: 0 auto; padding: var(--space-5); color: var(--color-text-faint); font-size: var(--text-xs); }
+
+  @media (max-width: 860px) {
+    .editor-sticky { flex-direction: column; align-items: stretch; justify-content: center; gap: var(--space-5); }
+    .editor-nav { flex: none; }
+    .editor-nav-list { flex-direction: row; flex-wrap: wrap; gap: var(--space-4); border-left: none; padding-left: 0; }
+    .editor-nav-progress { display: none; }
+    .editor-mockup { height: min(480px, 55vh); }
+  }
+</style>
+</head>
+<body>
+
+  <header class="site-header" id="site-header">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 120 120" style="flex-shrink:0;">
+        <circle cx="60" cy="60" r="46" fill="none" stroke="var(--color-text)" stroke-width="7"/>
+        <g stroke="var(--color-text-muted)" stroke-width="3.5" stroke-linecap="round">
+          <line x1="60" y1="60" x2="60" y2="17"/>
+          <line x1="60" y1="60" x2="97" y2="38"/>
+          <line x1="60" y1="60" x2="103" y2="60"/>
+          <line x1="60" y1="60" x2="97" y2="82"/>
+          <line x1="60" y1="60" x2="60" y2="103"/>
+          <line x1="60" y1="60" x2="23" y2="82"/>
+          <line x1="60" y1="60" x2="17" y2="60"/>
+          <line x1="60" y1="60" x2="23" y2="38"/>
+        </g>
+        <circle cx="60" cy="60" r="11" fill="var(--color-text)"/>
+        <circle cx="60" cy="60" r="7" fill="var(--color-bg)"/>
+        <circle cx="60" cy="60" r="4" fill="var(--color-primary)"/>
+      </svg>
+      <div class="brand-name"><span class="pdf">PDF</span>loom</div>
+    </div>
+    <div class="header-actions">
+      <a href="/auth/login" class="signin-link">Sign in</a>
+      <button class="theme-toggle" id="theme-toggle" type="button">
+        <span class="theme-icon is-dark" id="theme-icon">&#9790;</span>
+        Toggle theme
+      </button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-orb"></div>
+    <div class="hero-content">
+      <div class="eyebrow-pill">Introducing PDFloom</div>
+      <h1>Design your own PDF reports — visually.</h1>
+      <p class="hero-subhead">Drag fields, tables, and images onto a page. Bind them to your live inventory data. No Handlebars, no PDF library, no template stuck in someone else's codebase.</p>
+      <div class="hero-ctas">
+        <a href="/templates/new" class="btn btn-primary">Start designing</a>
+        <a href="#examples" class="btn btn-secondary">View example templates</a>
+      </div>
+      <p class="hero-microcopy">Free to design. Sign in only to save.</p>
+      <div class="scroll-cue">
+        <span>Scroll to see it in action</span>
+        <span class="scroll-cue-arrow">&darr;</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="editor-section" id="editor-section">
+    <div class="editor-sticky">
+
+      <div class="editor-nav">
+        <div class="editor-nav-eyebrow">The editor</div>
+        <div class="editor-nav-list">
+          <div class="editor-nav-progress" id="editor-nav-progress"></div>
+
+          <button class="editor-nav-item is-active" data-step="0" type="button">
+            <div class="editor-nav-title">Header &amp; fields</div>
+            <div class="editor-nav-desc">Bind text elements to your organization name and report title.</div>
+          </button>
+          <button class="editor-nav-item" data-step="1" type="button">
+            <div class="editor-nav-title">Data-bound tables &amp; badges</div>
+            <div class="editor-nav-desc">Wire columns to live inventory fields, with status pills that update automatically.</div>
+          </button>
+          <button class="editor-nav-item" data-step="2" type="button">
+            <div class="editor-nav-title">Any font, any color</div>
+            <div class="editor-nav-desc">Any Google Font per element, with custom text and background colors.</div>
+          </button>
+          <button class="editor-nav-item" data-step="3" type="button">
+            <div class="editor-nav-title">Multi-page layouts</div>
+            <div class="editor-nav-desc">Reports spanning multiple pages, each with its own background and layout.</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="editor-mockup">
+        <div class="editor-toolbar">
+          <div class="editor-tool is-active" data-tool="0">T</div>
+          <div class="editor-tool" data-tool="1">&#9638;</div>
+          <div class="editor-tool" data-tool="2">Aa</div>
+          <div class="editor-tool" data-tool="3">&#9636;</div>
+        </div>
+
+        <div class="editor-canvas-area">
+          <div class="editor-page">
+
+            <div class="editor-zone is-active" data-zone="0">
+              <div class="zone-bar-title"></div>
+              <div class="zone-bar-subtitle"></div>
+            </div>
+
+            <div class="editor-zone" data-zone="1">
+              <div class="zone-row"><span>Wireless Mouse</span><span class="zone-pill danger">Low</span></div>
+              <div class="zone-row"><span>USB-C Cable</span><span class="zone-pill success">In stock</span></div>
+              <div class="zone-row"><span>HDMI Adapter</span><span class="zone-pill success">In stock</span></div>
+            </div>
+
+            <div class="editor-zone" data-zone="2">
+              <div class="font-swatches">
+                <button class="font-swatch font-swatch-serif is-selected" data-font="0" type="button">Aa</button>
+                <button class="font-swatch font-swatch-mono" data-font="1" type="button">Aa</button>
+                <button class="font-swatch font-swatch-italic" data-font="2" type="button">Aa</button>
+              </div>
+              <div class="font-preview" id="font-preview">Wireless Mouse — 42 in stock</div>
+            </div>
+
+            <div class="editor-zone pages-zone" data-zone="3">
+              <div class="pages-thumbs">
+                <div class="page-thumb is-first"></div>
+                <div class="page-thumb"></div>
+                <div class="page-thumb"></div>
+              </div>
+              <div class="pages-caption">3 pages, one template</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="examples" id="examples">
+    <h2>Start from an example</h2>
+    <div class="examples-grid">
+
+      <div class="example-card" data-reveal>
+        <div class="example-preview"><span>template preview</span></div>
+        <div class="example-body">
+          <h3>Low Stock Report</h3>
+          <p>Table of SKUs under reorder threshold</p>
+          <span class="status-pill danger">Low stock</span>
+          <button class="included-toggle" type="button">
+            <span>What's included</span>
+            <span class="included-chevron">&#9662;</span>
+          </button>
+          <div class="included-detail">
+            <ul>
+              <li>SKU &amp; product name</li>
+              <li>Quantity on hand</li>
+              <li>Reorder threshold</li>
+              <li>Auto status badge</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="example-card" data-reveal style="transition-delay:.08s">
+        <div class="example-preview"><span>template preview</span></div>
+        <div class="example-body">
+          <h3>Invoice</h3>
+          <p>Line items, totals, and payment terms</p>
+          <span class="status-pill primary">Draft</span>
+          <button class="included-toggle" type="button">
+            <span>What's included</span>
+            <span class="included-chevron">&#9662;</span>
+          </button>
+          <div class="included-detail">
+            <ul>
+              <li>Line items &amp; quantities</li>
+              <li>Subtotal, tax &amp; total</li>
+              <li>Payment terms &amp; due date</li>
+              <li>Billing address</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="example-card" data-reveal style="transition-delay:.16s">
+        <div class="example-preview"><span>template preview</span></div>
+        <div class="example-body">
+          <h3>Packing Slip</h3>
+          <p>Order contents for warehouse pick lists</p>
+          <span class="status-pill success">In stock</span>
+          <button class="included-toggle" type="button">
+            <span>What's included</span>
+            <span class="included-chevron">&#9662;</span>
+          </button>
+          <div class="included-detail">
+            <ul>
+              <li>Order number &amp; ship date</li>
+              <li>Item list with quantities</li>
+              <li>Warehouse bin locations</li>
+              <li>Ship-to address</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="final-cta">
+    <div class="final-cta-inner" data-reveal>
+      <h2>Stop hand-coding report layouts.</h2>
+      <p class="final-cta-eyebrow">PDFloom</p>
+      <p class="body">Design your first PDF template in the browser — free, and no account needed to start.</p>
+      <a href="/templates/new" class="btn btn-primary">Start designing</a>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <span>&copy; 2026 PDFloom</span>
+  </footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- Theme toggle ----------
+  var themeToggle = document.getElementById('theme-toggle');
+  var themeIcon = document.getElementById('theme-icon');
+
+  function applyThemeIcon(theme) {
+    themeIcon.textContent = theme === 'light' ? '☀' : '☾';
+    themeIcon.classList.toggle('is-light', theme === 'light');
+    themeIcon.classList.toggle('is-dark', theme !== 'light');
+  }
+  applyThemeIcon(document.documentElement.getAttribute('data-theme') || 'dark');
+
+  themeToggle.addEventListener('click', function () {
+    var current = document.documentElement.getAttribute('data-theme') || 'dark';
+    var next = current === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    applyThemeIcon(next);
+  });
+
+  // ---------- Header shadow-on-scroll ----------
+  var header = document.getElementById('site-header');
+  var ticking = false;
+
+  // ---------- Scroll-pinned editor centerpiece ----------
+  var editorSection = document.getElementById('editor-section');
+  var navItems = Array.prototype.slice.call(document.querySelectorAll('.editor-nav-item'));
+  var tools = Array.prototype.slice.call(document.querySelectorAll('.editor-tool'));
+  var zones = Array.prototype.slice.call(document.querySelectorAll('.editor-zone'));
+  var navProgress = document.getElementById('editor-nav-progress');
+  var currentStep = -1;
+
+  function setStep(step) {
+    if (step === currentStep) return;
+    currentStep = step;
+    navItems.forEach(function (item) {
+      item.classList.toggle('is-active', Number(item.dataset.step) === step);
+    });
+    tools.forEach(function (tool) {
+      tool.classList.toggle('is-active', Number(tool.dataset.tool) === step);
+    });
+    zones.forEach(function (zone) {
+      zone.classList.toggle('is-active', Number(zone.dataset.zone) === step);
+    });
+  }
+
+  function onScroll() {
+    var scrolled = window.scrollY > 8;
+    header.classList.toggle('scrolled', scrolled);
+
+    var rect = editorSection.getBoundingClientRect();
+    var vh = window.innerHeight;
+    var total = rect.height - vh;
+    var progress = total > 0 ? (-rect.top) / total : 0;
+    progress = Math.max(0, Math.min(1, progress));
+
+    var steps = 4;
+    var step = Math.floor(progress * steps);
+    if (step >= steps) step = steps - 1;
+    if (step < 0) step = 0;
+    setStep(step);
+
+    navProgress.style.height = (progress * 100) + '%';
+  }
+
+  window.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () {
+      ticking = false;
+      onScroll();
+    });
+  }, { passive: true });
+  onScroll();
+
+  navItems.forEach(function (item) {
+    item.addEventListener('click', function () {
+      var idx = Number(item.dataset.step);
+      var rect = editorSection.getBoundingClientRect();
+      var vh = window.innerHeight;
+      var total = rect.height - vh;
+      if (total <= 0) return;
+      var targetProgress = (idx + 0.5) / 4;
+      var targetScrollY = window.scrollY + rect.top + targetProgress * total;
+      window.scrollTo({ top: targetScrollY, behavior: prefersReduced ? 'auto' : 'smooth' });
+    });
+  });
+
+  // ---------- Font swatches ----------
+  var fonts = [
+    { family: 'Georgia, serif', color: 'var(--color-text)', fontStyle: 'normal', decoration: 'none' },
+    { family: "'Courier New', monospace", color: 'var(--color-primary)', fontStyle: 'normal', decoration: 'none' },
+    { family: 'var(--font-sans)', color: 'var(--color-danger)', fontStyle: 'italic', decoration: 'underline' }
+  ];
+  var swatches = Array.prototype.slice.call(document.querySelectorAll('.font-swatch'));
+  var fontPreview = document.getElementById('font-preview');
+
+  function selectFont(idx) {
+    swatches.forEach(function (swatch) {
+      swatch.classList.toggle('is-selected', Number(swatch.dataset.font) === idx);
+    });
+    var font = fonts[idx];
+    fontPreview.style.fontFamily = font.family;
+    fontPreview.style.color = font.color;
+    fontPreview.style.fontStyle = font.fontStyle;
+    fontPreview.style.textDecoration = font.decoration;
+  }
+
+  swatches.forEach(function (swatch) {
+    swatch.addEventListener('click', function () {
+      selectFont(Number(swatch.dataset.font));
+    });
+  });
+
+  // ---------- "What's included" collapsibles ----------
+  Array.prototype.slice.call(document.querySelectorAll('.included-toggle')).forEach(function (toggle) {
+    var detail = toggle.nextElementSibling;
+    toggle.addEventListener('click', function () {
+      var isOpen = toggle.classList.contains('is-open');
+      // Only one panel open at a time.
+      Array.prototype.slice.call(document.querySelectorAll('.included-toggle.is-open')).forEach(function (open) {
+        if (open !== toggle) {
+          open.classList.remove('is-open');
+          open.nextElementSibling.classList.remove('is-open');
+        }
+      });
+      toggle.classList.toggle('is-open', !isOpen);
+      detail.classList.toggle('is-open', !isOpen);
+    });
+  });
+
+  // ---------- Scroll reveals ----------
+  var revealTargets = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
+  if (prefersReduced) {
+    revealTargets.forEach(function (el) {
+      el.classList.add(el.classList.contains('final-cta-inner') ? 'is-revealed' : 'is-revealed');
+    });
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-revealed');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    revealTargets.forEach(function (el) { io.observe(el); });
+  }
+})();
+</script>
+</body>
+</html>
