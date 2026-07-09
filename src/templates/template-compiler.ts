@@ -136,7 +136,11 @@ function compileElement(el: TemplateElement): string {
 
   switch (el.type) {
     case 'text':
-      return `<div class="el" style="${style}">${escapeHtml(el.content ?? '')}</div>`;
+      // .text-el (below) lets long content wrap within the element's own width instead of
+      // being clipped as one line — matching the frontend editor's canvas, which auto-fits a
+      // text element's *height* to however many lines that wrapping produces at a
+      // user-chosen width. Every other element type stays single-line/nowrap.
+      return `<div class="el text-el" style="${style}">${escapeHtml(el.content ?? '')}</div>`;
 
     case 'field': {
       const path = sanitizeFieldPath(el.fieldPath ?? '');
@@ -243,6 +247,7 @@ ${googleFontsLink}<style>
   .page { position: relative; width: ${template.pageWidth}px; height: ${template.pageHeight}px; overflow: hidden; page-break-after: always; ${pageBackground} }
   .page:last-child { page-break-after: auto; }
   .el { position: absolute; box-sizing: border-box; overflow: hidden; padding: 2px 4px; white-space: nowrap; }
+  .el.text-el { white-space: normal; overflow-wrap: break-word; }
   .el table { white-space: normal; }
   .el.image-el { padding: 0; }
   .el.image-el img { display: block; width: 100%; height: 100%; object-fit: contain; }
